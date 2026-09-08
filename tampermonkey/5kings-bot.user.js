@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         5Kings Bot
 // @namespace    https://5kings.ru/
-// @version      1.2.34
+// @version      1.2.36
 // @description  Лес + королевские хаосы 5kings.ru. Только ТЗ. Локальный userscript.
 // @author       freelance
 // @match        http://5kings.ru/*
@@ -71,7 +71,7 @@
     }
   }
 
-  const VERSION = '1.2.34';
+  const VERSION = '1.2.36';
 
   try {
     console.log('%c[5k-bot] executed v' + VERSION + ' @ ' + location.href, 'background:#1a5c1a;color:#fff;padding:4px');
@@ -444,8 +444,7 @@
         helperSpell: 'помощник|вызвать\\s*помощ|клон|создать\\s*клон|clone',
         helperFormId: '',
         // лечение — заклинание из книги магии, не свиток из сумки
-        // \w не ловит кириллицу — «Восстановить здоровье» через восстанов|здоровье
-        healSpell: 'восстанов|здоровье|лечен|исцел|heal|cure|restore',
+        healSpell: 'восстанови|восстановить\\s*здоровье|здоровье|лечен|исцел|heal|cure|restore',
         magicBookUrl: '/magbook.chtml',
       },
       captcha: {
@@ -506,6 +505,7 @@
       equippedToolKind: null,
       viewWidened: false,
       helperFailUntil: 0,
+      helperBusy: false,
       helperDisabled: false,
       helperFormId: '',
       helperMissCount: 0,
@@ -2551,7 +2551,38 @@
           (el.src || (el.getAttribute && el.getAttribute('src')) || '');
       }
     } catch (e) {}
-    return s;
+    return normalizeItemName(s);
+  }
+
+  function normalizeItemName(s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/\u00a0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/ё/g, 'е')
+      .trim();
+  }
+
+  // kind → инструмент (дерево = топор, руда = кирка)
+  const TOOL_MAP = {
+    copper: { name: 'кирка', kind: 'pick' },
+    iron: { name: 'кирка', kind: 'pick' },
+    gold: { name: 'кирка', kind: 'pick' },
+    tree: { name: 'топор', kind: 'axe' },
+    mushroom: { name: 'корзина грибника', kind: 'basket' },
+    herb: { name: 'корзина грибника', kind: 'basket' },
+    basket: { name: 'корзина грибника', kind: 'basket' },
+  };
+
+  function resolveToolWant(hintTxt, kind) {
+    const blob = normalizeItemName(String(hintTxt || '') + ' ' + String(kind || ''));
+    const mapped = TOOL_MAP[kind];
+    if (mapped) return mapped;
+    if (kind === 'basket' || BASKET_NEED_RE.test(blob)) return TOOL_MAP.basket;
+    if (/мед|желез|золот|руд|кирк|copper|iron|gold|pick/i.test(blob)) return TOOL_MAP.copper;
+    if (/дерев|сосн|дуб|топор|axe|лесоруб|дровосек/i.test(blob)) return TOOL_MAP.tree;
+    if (/корзин|гриб|mushroom/i.test(blob)) return TOOL_MAP.mushroom;
+    return null;
   }
 
   function findRowAction(row, re) {
@@ -2639,7 +2670,7 @@
   }
 
   function bagRowIsTool(txt, wantKind) {
-    const t = String(txt || '').toLowerCase();
+    const t = normalizeItemName(txt);
     if (!t) return false;
     if (/шлем|амулет|лат[ыа]|перчатк|пояс|щит|понож|кольц|наруч|оружи|брон|доспех|кираса/i.test(t))
       return false;
@@ -2661,20 +2692,12 @@
 
   async function equipCraftTool(hintTxt, kind, force) {
     if (!BOT.cfg.forest.equipTool) return false;
-    const blob = String(hintTxt || '') + ' ' + String(kind || '');
-    const wantBasket = kind === 'mushroom' || kind === 'basket' || BASKET_NEED_RE.test(blob);
-    const wantPick =
-      !wantBasket &&
-      (kind === 'copper' ||
-        kind === 'iron' ||
-        kind === 'gold' ||
-        /мед|желез|золот|руд|кирк|copper|iron|gold/i.test(blob));
-    const wantAxe =
-      !wantBasket &&
-      !wantPick &&
-      (kind === 'tree' || /дерев|сосн|дуб|топор|axe|лесоруб|дровосек/i.test(blob));
-    if (!wantBasket && !wantPick && !wantAxe) return false;
-    const wantKind = wantBasket ? 'basket' : wantPick ? 'pick' : 'axe';
+    const want = resolveToolWant(hintTxt, kind);
+    if (!want) return false;
+    const wantKind = want.kind;
+    const wantPick = wantKind === 'pick';
+    const wantAxe = wantKind === 'axe';
+    const wantBasket = wantKind === 'basket';
     if (BOT.state.equippedToolKind && BOT.state.equippedToolKind !== wantKind) force = true;
     if (!force && BOT.state.equippedToolKind === wantKind) return true;
     if (!force && Date.now() - (BOT.state.lastEquipTryAt || 0) < 20000 && BOT.state.lastEquipTryKind === wantKind) {
@@ -2682,7 +2705,7 @@
     }
     BOT.state.lastEquipTryAt = Date.now();
     BOT.state.lastEquipTryKind = wantKind;
-    const label = wantBasket ? 'корзина грибника' : wantPick ? 'кирка' : 'топор';
+    const label = want.name;
     log('Инвентарь: ' + label + '…');
 
     const paths = ['bag_type_17_mode_0.html', 'bag.chtml', 'bag_type_17.html'];
@@ -2799,8 +2822,14 @@
     }
     if (bigForestBusy(win)) {
       BOT.state.dobychaFails = 0;
-      // не сбрасываем hint — после добычи снова «перед вами» и копаем дальше
-      BOT.state.craftStickUntil = Date.now() + 90000;
+      // держаться у жилы после добычи
+      BOT.state.craftStickUntil = Date.now() + 45000;
+      BOT.state.craftStickTarget = {
+        x: me ? me.x : null,
+        y: me ? me.y : null,
+        kind: toolKind || kind || 'copper',
+      };
+      log('Большой лес: добыча — удерживаю позицию у жилы 45с');
     }
     return true;
   }
@@ -2824,6 +2853,72 @@
     return cur;
   }
 
+  /** Клик по клетке карты (GotoKletka) — как живой игрок, без кручения на месте. */
+  async function clickMapCell(win, x, y) {
+    if (x == null || y == null) return false;
+    if (isBlockedCell(win, x, y)) {
+      const k = kindAtCell(win, x, y);
+      if (!(k === 'copper' || k === 'iron' || k === 'gold' || k === 'tree')) return false;
+    }
+    await gotoWorldCell(win, x, y, 8000);
+    return true;
+  }
+
+  /** Подойти/развернуться к ресурсу по подсказке поиска через клик по карте. */
+  async function faceResourceByHint(win, me, hint, kind) {
+    if (!me || !hint) return false;
+    const faceN = naprFromHintDir(win, hint.dir);
+    const dlt = bigForestNaprDeltas(win);
+    const tx = Number(me.x) + dlt.nx[faceN];
+    const ty = Number(me.y) + dlt.ny[faceN];
+    // если на карте видна жила этого типа рядом — клик к ней
+    const near = listBigForestItems(win, 'craft')
+      .filter(function (it) {
+        if (kind === 'tree') return it.kind === 'tree';
+        return it.kind === kind;
+      })
+      .filter(function (it) {
+        return bigForestChebyshev(me.x, me.y, it.x, it.y) <= 3;
+      })
+      .sort(function (a, b) {
+        return bigForestChebyshev(me.x, me.y, a.x, a.y) - bigForestChebyshev(me.x, me.y, b.x, b.y);
+      });
+    if (near.length) {
+      const v = near[0];
+      // встать рядом лицом к жиле
+      let stand = null;
+      for (let n = 1; n <= 8; n++) {
+        const sx = Number(v.x) - dlt.nx[n];
+        const sy = Number(v.y) - dlt.ny[n];
+        if (isBlockedCell(win, sx, sy)) continue;
+        const dist = bigForestChebyshev(me.x, me.y, sx, sy);
+        if (dist > 3) continue;
+        if (!stand || dist < stand.dist) stand = { x: sx, y: sy, n: n, dist: dist };
+      }
+      if (stand && stand.dist > 0) {
+        log('Большой лес: клик к клетке ресурса ' + stand.x + ',' + stand.y + ' (' + kind + ')');
+        await clickMapCell(win, stand.x, stand.y);
+        turnToFace(win, stand.n);
+        BOT.state.wanderNapr = stand.n;
+        await sleep(400);
+        return true;
+      }
+      if (stand && stand.dist === 0) {
+        turnToFace(win, stand.n);
+        BOT.state.wanderNapr = stand.n;
+        await sleep(350);
+        return true;
+      }
+    }
+    // нет видимой жилы — клик в сторону подсказки + лёгкий поворот
+    log('Большой лес: клик по направлению «' + hint.dir + '» → ' + tx + ',' + ty);
+    const clicked = await clickMapCell(win, tx, ty);
+    turnToFace(win, faceN);
+    BOT.state.wanderNapr = faceN;
+    await sleep(clicked ? humanDelay(600, 1100) : 400);
+    return true;
+  }
+
   async function reactToCraftHint(win, me, hint) {
     if (!hint || !hintFresh(hint, 25000)) return false;
     const kind = craftKindFromHint(hint);
@@ -2837,16 +2932,13 @@
       return true;
     }
 
-    // слева / справа / сзади — развернуться на месте, надеть инструмент, снова поиск
+    // слева / справа / сзади — клик по карте (не step-поворот), инструмент, поиск
     if (hint.dir === 'left' || hint.dir === 'right' || hint.dir === 'back') {
-      const want = naprFromHintDir(win, hint.dir);
-      log('Большой лес: «' + hint.dir + '» → поворот ' + currentNapr(win) + '→' + want + ' (' + kind + ')');
+      log('Большой лес: «' + hint.dir + '» → клик/лицо (' + kind + ')');
       try {
         await equipCraftTool(hint.txt || kind, kind, false);
       } catch (eEq) {}
-      const turns = turnToFace(win, want);
-      await sleep(turns ? 550 : 350);
-      BOT.state.wanderNapr = want;
+      await faceResourceByHint(win, me, hint, kind);
       await bigForestDoSearch(win);
       return true;
     }
@@ -2875,6 +2967,8 @@
         const d = bigForestChebyshev(me.x, me.y, v.x, v.y);
         if (d <= 1) {
           const faceN = naprToward(win, me.x, me.y, v.x, v.y);
+          // клик на клетку жилы / стойку рядом
+          await clickMapCell(win, v.x, v.y);
           turnToFace(win, faceN);
           BOT.state.wanderNapr = faceN;
           await sleep(450);
@@ -2884,11 +2978,11 @@
         await walkToward(win, v, kind + ' радиус', true);
         return true;
       }
-      // на карте не видно (часто деревья) — короткий шаг вперёд и поиск
+      // на карте не видно (часто деревья) — клик вперёд и поиск
       const stepN = BOT.state.wanderNapr || currentNapr(win);
       const end = hopFreeEnd(win, me, stepN, 3);
       if (Number(end.x) !== Number(me.x) || Number(end.y) !== Number(me.y)) {
-        await gotoWorldCell(win, end.x, end.y, 6000);
+        await clickMapCell(win, end.x, end.y);
       }
       await bigForestDoSearch(win);
       return true;
@@ -3183,13 +3277,32 @@
       }
     }
 
-    // держаться у жилы после удачной добычи — не уходить бродить
-    if (needCraft && Date.now() < (BOT.state.craftStickUntil || 0)) {
-      const ak = aheadKind;
-      if (ak === 'copper' || ak === 'iron' || ak === 'gold' || ak === 'tree') {
-        await bigForestDoSearch(win);
-        return;
+    // держаться у жилы после удачной добычи — не уходить бродить / на радар
+    if (needCraft && BOT.state.craftStickTarget && Date.now() < (BOT.state.craftStickUntil || 0)) {
+      const t = BOT.state.craftStickTarget;
+      if (t.x != null && t.y != null) {
+        const dStick = bigForestChebyshev(me.x, me.y, t.x, t.y);
+        if (dStick === 0) {
+          const ak = aheadKind || t.kind;
+          if (ak === 'copper' || ak === 'iron' || ak === 'gold' || ak === 'tree') {
+            await bigForestDoSearch(win);
+            const hStick = parseBigForestHint(bigForestReadText(win)) || BOT.state.bigForestHint;
+            if (hStick && hStick.front) {
+              BOT.state.bigForestHint = hStick;
+              await bigForestTryDobycha(win, 'перед вами', t.kind || ak);
+            }
+            return;
+          }
+        } else if (dStick <= 2) {
+          log('Большой лес: возвращаюсь к жиле @' + t.x + ',' + t.y);
+          await walkToward(win, t, t.kind || 'жила', true);
+          return;
+        } else {
+          BOT.state.craftStickTarget = null;
+        }
       }
+    } else if (BOT.state.craftStickTarget && Date.now() >= (BOT.state.craftStickUntil || 0)) {
+      BOT.state.craftStickTarget = null;
     }
 
     // 2) Травы/грибы раньше руды. Одна цель до сбора — иначе радар дёргает туда-сюда.
@@ -4026,6 +4139,8 @@
         if (x < 0 || y < 0) continue;
         const key = x + ',' + y;
         if (banned[key] && Date.now() < banned[key]) continue;
+        const occ = BOT.state.occupiedCells || {};
+        if (occ[key] && Date.now() < occ[key]) continue;
         let hd = 99;
         try {
           hd = win.HexDistance(x, y, ub.x, ub.y);
@@ -4045,7 +4160,40 @@
   function banSummonHex(hex, ms) {
     if (!hex || hex.x == null) return;
     if (!BOT.state.bannedSummonHex) BOT.state.bannedSummonHex = {};
-    BOT.state.bannedSummonHex[hex.x + ',' + hex.y] = Date.now() + (ms || 45000);
+    if (!BOT.state.occupiedCells) BOT.state.occupiedCells = {};
+    const key = hex.x + ',' + hex.y;
+    const until = Date.now() + (ms || 45000);
+    BOT.state.bannedSummonHex[key] = until;
+    BOT.state.occupiedCells[key] = until;
+  }
+
+  async function waitMagselectResult(selWin, battleWin, timeoutMs) {
+    const deadline = Date.now() + (timeoutMs || 7000);
+    while (Date.now() < deadline) {
+      try {
+        if (!selWin || selWin.closed) return 'closed';
+        let body = '';
+        let href = '';
+        try {
+          body = (selWin.document && selWin.document.body && (selWin.document.body.innerText || '')) || '';
+        } catch (eB) {}
+        try {
+          href = String((selWin.location && selWin.location.href) || '');
+        } catch (eH) {}
+        const errTxt = battleOverlayErrorText(selWin) + ' ' + battleOverlayErrorText(battleWin) + ' ' + body;
+        if (
+          isBusyHexError(errTxt) ||
+          /занят|невозмож|ошибка|error|busy|свободн|выбер/i.test(errTxt) ||
+          consumeBusyAlert()
+        ) {
+          return 'occupied';
+        }
+        if (/magbook\.chtml/i.test(href) && !/magselect/i.test(href)) return 'ok';
+        if (!/magselect/i.test(href) && body.trim().length < 8) return 'ok';
+      } catch (_) {}
+      await sleep(300);
+    }
+    return 'timeout';
   }
 
   function battleOverlayErrorText(win) {
@@ -4068,9 +4216,84 @@
   }
 
   function isBusyHexError(txt) {
-    return /занят|клетк\w*\s+занят|нельзя\s+поставить|невозможно\s+вызвать|уже\s+стоит|occupied|busy\s*cell/i.test(
+    return /занят|клетк\w*\s+занят|нельзя\s+поставить|невозможно\s+вызвать|уже\s+стоит|occupied|busy\s*cell|свободн\w*\s*клетк|выбер\w*\s+свобод|выберите\s+свободн/i.test(
       String(txt || '')
     );
+  }
+
+  /** alert() в бою/книге блокирует весь JS до клика OK — подменяем, иначе «глухой» зависон. */
+  function muteGameDialogs(win) {
+    if (!win) return;
+    try {
+      if (win.__k5_dialogs_muted) {
+        // magbook iframe перезагружается — перевешиваем после навигации
+        if (win.__k5_mute_href === String((win.location && win.location.href) || '')) return;
+      }
+    } catch (eH) {}
+    try {
+      win.__k5_dialogs_muted = true;
+      try {
+        win.__k5_mute_href = String((win.location && win.location.href) || '');
+      } catch (eHref) {
+        win.__k5_mute_href = '';
+      }
+      win.alert = function (msg) {
+        const t = String(msg == null ? '' : msg);
+        BOT.state.lastGameAlert = t;
+        BOT.state.lastGameAlertAt = Date.now();
+        log('Бой: alert «' + t.replace(/\s+/g, ' ').slice(0, 90) + '» (авто-закрыт)', 'err');
+        if (isBusyHexError(t) || /свободн|выбер/i.test(t)) {
+          BOT.state.lastBusyAlertAt = Date.now();
+        }
+        return undefined;
+      };
+      const prevConfirm = win.confirm;
+      win.confirm = function (msg) {
+        const t = String(msg == null ? '' : msg);
+        if (t) {
+          BOT.state.lastGameAlert = t;
+          BOT.state.lastGameAlertAt = Date.now();
+        }
+        if (isBusyHexError(t) || /свободн|выбер|ошибк|нельзя|невозмож/i.test(t)) {
+          log('Бой: confirm «' + t.replace(/\s+/g, ' ').slice(0, 90) + '» → false', 'err');
+          BOT.state.lastBusyAlertAt = Date.now();
+          return false;
+        }
+        // MakeTurn и прочее — как раньше auto-OK
+        return true;
+      };
+      win.prompt = function () {
+        return null;
+      };
+      void prevConfirm;
+    } catch (e) {}
+  }
+
+  function muteBattleAndBook(battleWin, bookWin) {
+    muteGameDialogs(battleWin);
+    muteGameDialogs(bookWin);
+    try {
+      const iframe = battleWin && battleWin.document && battleWin.document.getElementById('k5-magbook');
+      if (iframe && iframe.contentWindow) muteGameDialogs(iframe.contentWindow);
+    } catch (eI) {}
+    try {
+      muteGameDialogs(getTopWin());
+    } catch (eT) {}
+    try {
+      muteGameDialogs(PAGE);
+    } catch (eP) {}
+  }
+
+  function consumeBusyAlert() {
+    const t = String(BOT.state.lastGameAlert || '');
+    const at = BOT.state.lastBusyAlertAt || BOT.state.lastGameAlertAt || 0;
+    if (!t || Date.now() - at > 8000) return false;
+    if (isBusyHexError(t) || /свободн|выбер/i.test(t)) {
+      BOT.state.lastGameAlert = '';
+      BOT.state.lastBusyAlertAt = 0;
+      return true;
+    }
+    return false;
   }
 
   function closeBattlePopup(name) {
@@ -4308,11 +4531,21 @@
   }
 
   function isHealSpellBlob(blob) {
-    const t = String(blob || '');
+    const t = normalizeItemName(blob);
     if (/помощник|вызвать\s*помощ|создать\s*клон/i.test(t)) return false;
-    if (/восстановить\s*здоров|восстановлен\w*\s*здоров/i.test(t)) return true;
+    if (spellMatchesPattern(t, 'восстанови|восстановить\\s*здоровье|здоровье')) return true;
     if (/здоровье/i.test(t) && /восстанов|лечен|исцел/i.test(t)) return true;
     return /лечен|восстанов|хил|heal|cure|restore\s*health/i.test(t);
+  }
+
+  function spellMatchesPattern(spellName, pattern) {
+    const name = normalizeItemName(spellName);
+    if (!pattern) return false;
+    try {
+      return new RegExp(String(pattern), 'iu').test(name);
+    } catch (_) {
+      return name.indexOf(normalizeItemName(pattern)) >= 0;
+    }
   }
 
   function magbookHasSpells(doc) {
@@ -4599,6 +4832,8 @@
     setOpenerNow();
     await waitMagbookStable(frameWin, 700);
     setOpenerNow();
+    muteGameDialogs(win);
+    muteGameDialogs(frameWin);
     return { win: frameWin, via: 'iframe', iframe: iframe, battleWin: win };
   }
 
@@ -4639,17 +4874,26 @@
       } catch (eI) {}
       for (let d = 0; d < docs.length; d++) {
         const doc = docs[d];
+        const pageTxt = String((doc.body && (doc.body.innerText || doc.body.textContent)) || '').slice(0, 2500);
+        const freeCellDlg = /свободн\w*\s*клетк|выбер\w*\s+свобод/i.test(pageTxt);
         const btns = [...doc.querySelectorAll('input[type=button],input[type=submit],button,a')];
         for (let i = 0; i < btns.length; i++) {
           const blob = ((btns[i].value || '') + ' ' + (btns[i].textContent || '')).toLowerCase();
-          if (/^ok$|закрыть|отмена|cancel|продолж|понятн/i.test(blob)) {
+          if (
+            /^ok$|закрыть|отмена|cancel|продолж|понятн/i.test(blob) ||
+            (freeCellDlg && /^(ok|ок|да|закрыть)$/i.test(blob.trim()))
+          ) {
             try {
               btns[i].click();
             } catch (eC) {}
           }
         }
-        const modal = doc.getElementById('modal_form');
+        const modal = doc.getElementById('modal_form') || doc.getElementById('modal') || doc.querySelector('.modal');
         if (modal && modal.style) modal.style.display = 'none';
+        if (freeCellDlg) {
+          BOT.state.lastGameAlert = pageTxt.replace(/\s+/g, ' ').slice(0, 120);
+          BOT.state.lastBusyAlertAt = Date.now();
+        }
       }
     } catch (e) {}
   }
@@ -4865,6 +5109,11 @@
   async function finishMagselect(battleWin, bookWin, hex, pick) {
     const url = magselectUrlWithBid((pick && pick.url) || 'magselect.chtml', battleWin);
     const cid = magselectCidFromPick(pick);
+    BOT.state.helperBusy = true;
+    BOT.state.helperBusySince = Date.now();
+    BOT.state.lastGameAlert = '';
+    BOT.state.lastBusyAlertAt = 0;
+    muteBattleAndBook(battleWin, bookWin);
 
     const t0 = Date.now();
     let selWin = bookWin;
@@ -4873,13 +5122,16 @@
         if (bookWin && bookWin.opener !== battleWin) bookWin.opener = battleWin;
       } catch (eOp) {}
       selWin = findMagselectWin(battleWin, bookWin);
+      muteBattleAndBook(battleWin, selWin);
       if (magselectLooksReady(selWin) && selWin !== battleWin) break;
       await sleep(200);
     }
     if (!magselectLooksReady(selWin) || selWin === battleWin) {
       log('Бой: magselect.chtml не открылось — не жму чужой «Применить»', 'err');
+      BOT.state.helperBusy = false;
       return false;
     }
+    muteBattleAndBook(battleWin, selWin);
     try {
       if (typeof battleWin.ab === 'function') battleWin.ab(8);
     } catch (eAb) {}
@@ -4887,10 +5139,38 @@
     setMagselectHexVars(selWin, hex);
     clickMagselectHex(selWin, hex, battleWin);
     await sleep(350);
+    muteBattleAndBook(battleWin, selWin);
 
-    let how = confirmMagselect(selWin, battleWin, hex, pick);
+    let how = '';
+    try {
+      how = confirmMagselect(selWin, battleWin, hex, pick);
+    } catch (eConf) {
+      log('Бой: confirmMagselect exception ' + (eConf && eConf.message), 'err');
+    }
+    if (consumeBusyAlert()) {
+      log('Бой: alert «свободная клетка» — клетка занята, сброс', 'err');
+      banSummonHex(hex, 60000);
+      dismissBattleDialogs(selWin);
+      dismissBattleDialogs(battleWin);
+      closeMagbookWin({ via: 'iframe', iframe: battleWin.document && battleWin.document.getElementById('k5-magbook'), win: selWin }, true);
+      BOT.state.helperBusy = false;
+      BOT.state.helperFailUntil = Date.now() + 10000;
+      return false;
+    }
     if (!how || /^goRC-xy$|^href-xy$/.test(how)) {
-      if (tryDirectMagselectCast(battleWin, hex, pick)) how = 'PrepareReq';
+      try {
+        if (tryDirectMagselectCast(battleWin, hex, pick)) how = 'PrepareReq';
+      } catch (eDir) {}
+    }
+    if (consumeBusyAlert()) {
+      log('Бой: alert после каста — клетка занята, сброс', 'err');
+      banSummonHex(hex, 60000);
+      dismissBattleDialogs(selWin);
+      dismissBattleDialogs(battleWin);
+      closeMagbookWin({ via: 'iframe', iframe: battleWin.document && battleWin.document.getElementById('k5-magbook'), win: selWin }, true);
+      BOT.state.helperBusy = false;
+      BOT.state.helperFailUntil = Date.now() + 10000;
+      return false;
     }
     log(
       'Бой: magselect клетка ' +
@@ -4899,23 +5179,47 @@
         (cid ? ' cid=' + cid : ''),
       how && !/^goRC-xy$|^href-xy$/.test(how) ? 'ok' : 'err'
     );
-    await sleep(how && !/^goRC-xy$|^href-xy$/.test(how) ? 900 : 300);
+    await sleep(how && !/^goRC-xy$|^href-xy$/.test(how) ? 500 : 300);
+
+    // проверка результата после click-cast (занятая клетка / зависание)
+    const castResult = await waitMagselectResult(selWin, battleWin, 7000);
+    const busyNow = castResult === 'occupied' || consumeBusyAlert();
+    if (busyNow || castResult === 'timeout') {
+      log('Бой: magselect — ' + (busyNow ? 'occupied' : castResult) + ', сброс и повтор через 10с', 'err');
+      banSummonHex(hex, 60000);
+      dismissBattleDialogs(selWin);
+      dismissBattleDialogs(battleWin);
+      closeMagbookWin({ via: 'iframe', iframe: battleWin.document && battleWin.document.getElementById('k5-magbook'), win: selWin }, true);
+      BOT.state.helperBusy = false;
+      BOT.state.helperFailUntil = Date.now() + 10000;
+      return false;
+    }
+
     const errTxt = battleOverlayErrorText(selWin) + ' ' + battleOverlayErrorText(battleWin);
     if (isBusyHexError(errTxt)) {
       log('Бой: клетка занята для клона — закрываю окна', 'err');
       banSummonHex(hex, 60000);
       dismissBattleDialogs(selWin);
       dismissBattleDialogs(battleWin);
+      closeMagbookWin({ via: 'iframe', iframe: battleWin.document && battleWin.document.getElementById('k5-magbook'), win: selWin }, true);
+      BOT.state.helperBusy = false;
+      BOT.state.helperFailUntil = Date.now() + 10000;
       return false;
     }
-    if (/ошибк|неудач|нельзя|невозможно/i.test(errTxt) && /клон|помощник|клетк/i.test(errTxt)) {
+    if (/ошибк|неудач|нельзя|невозможно|свободн/i.test(errTxt) && /клон|помощник|клетк/i.test(errTxt)) {
       log('Бой: ошибка каста клона — закрываю окна', 'err');
       banSummonHex(hex, 30000);
       dismissBattleDialogs(selWin);
       dismissBattleDialogs(battleWin);
+      closeMagbookWin({ via: 'iframe', iframe: battleWin.document && battleWin.document.getElementById('k5-magbook'), win: selWin }, true);
+      BOT.state.helperBusy = false;
+      BOT.state.helperFailUntil = Date.now() + 8000;
       return false;
     }
-    return !!(how && !/^goRC-xy$|^href-xy$/.test(how));
+    const ok = !!(how && !/^goRC-xy$|^href-xy$/.test(how)) || castResult === 'ok' || castResult === 'closed';
+    BOT.state.helperBusy = false;
+    if (ok) BOT.state.occupiedCells = {};
+    return ok;
   }
 
   function castMagbookSpell(battleWin, bookWin, pick) {
@@ -5185,6 +5489,18 @@
     const cfg = BOT.cfg.battle;
     if (!cfg.summonHelper || !flagGet(FLAG.chaos)) return false;
     if (!state.enemies.length) return false;
+    if (BOT.state.helperBusy) {
+      if (Date.now() - (BOT.state.helperBusySince || 0) > 20000) {
+        log('Бой: helperBusy завис — сброс окон', 'err');
+        BOT.state.helperBusy = false;
+        dismissBattleDialogs(win);
+        try {
+          closeMagbookWin({ via: 'iframe', iframe: win.document && win.document.getElementById('k5-magbook') }, true);
+        } catch (eC) {}
+      } else {
+        return false;
+      }
+    }
     const seq = BOT.state.battleTurnSeq || 0;
     // один каст клона на ЭТОТ наш ход; следующий раунд seq++ и снова можно
     if (seq && BOT.state.helperCastSeq === seq) return false;
@@ -5192,6 +5508,7 @@
       cfg.helperSpell && String(cfg.helperSpell).trim() ? cfg.helperSpell : 'помощник|вызвать\\s*помощ|helper',
       'i'
     );
+    BOT.state.helperBusySince = Date.now();
     const ok = await castMagbookByPredicate(win, state, {
       logName: 'помощник',
       needHex: true,
@@ -5205,6 +5522,7 @@
         return isHealSpellBlob(blob);
       },
     });
+    BOT.state.helperBusy = false;
     if (ok) {
       BOT.state.helperCastSeq = seq;
       log('Бой: клон в этом ходу уже кинут (ход #' + seq + ') — дальше удар/блок');
@@ -5216,19 +5534,17 @@
   async function trySummonHealSpell(win, state) {
     const cfg = BOT.cfg.battle;
     if (!cfg.useMagic) return false;
-    const healRe = new RegExp(
+    const healPat =
       cfg.healSpell && String(cfg.healSpell).trim()
         ? cfg.healSpell
-        : 'восстанов|здоровье|лечен|исцел|heal|cure|restore',
-      'i'
-    );
+        : 'восстанови|восстановить\\s*здоровье|здоровье|лечен|исцел|heal|cure|restore';
     return castMagbookByPredicate(win, state, {
       logName: 'лечение',
       needHex: false,
       formIdKey: 'healFormId',
       failKey: 'healSpellMissUntil',
       match: function (blob) {
-        return isHealSpellBlob(blob) || healRe.test(String(blob || ''));
+        return isHealSpellBlob(blob) || spellMatchesPattern(blob, healPat);
       },
       exclude: function (blob) {
         return isHelperBlob(blob, null);
@@ -5584,19 +5900,20 @@
     [0, 1].forEach(function (side) {
       if (points(side) >= 2) return;
       clearHand(side);
-      if (tactic === 'aggressive') {
-        forceKick(side);
-      } else if (tactic === 'defense') {
+      if (tactic === 'defense') {
         applyBlocks(side, 2);
+      } else if (tactic === 'aggressive') {
+        // только удары — без добивания блоками
+        forceKick(side);
+        if (points(side) < 2) forceKick(side);
       } else {
         if (side === 0) forceKick(side);
         else applyBlocks(side, 2);
       }
-      if (points(side) < 2 && tactic !== 'aggressive') {
-        applyBlocks(side, 2);
-      }
-      if (points(side) < 2) {
-        forceKick(side);
+      // добить до 2 очков блоками ТОЛЬКО не на aggressive
+      if (tactic !== 'aggressive') {
+        if (points(side) < 2) applyBlocks(side, 2);
+        if (points(side) < 2) forceKick(side);
       }
     });
 
@@ -5635,13 +5952,37 @@
     BOT.state.battleTurnSeq = 0;
     BOT.state.helperCastSeq = 0;
     BOT.state.helperFailUntil = 0;
+    BOT.state.helperBusy = false;
+    BOT.state.lastTickAt = Date.now();
+    muteBattleAndBook(win, null);
 
     while (flagGet(FLAG.chaos) && !flagGet(FLAG.captcha)) {
+      BOT.state.lastTickAt = Date.now();
+      muteBattleAndBook(win, null);
       refreshCfg();
       watchCaptcha();
+      // watchdog: зависшие magbook/helper — сброс (alert больше не должен глушить, но на всякий)
+      if (
+        (BOT.state.helperBusy && Date.now() - (BOT.state.helperBusySince || 0) > 25000) ||
+        (BOT.state.lastBusyAlertAt && Date.now() - BOT.state.lastBusyAlertAt < 2000)
+      ) {
+        if (BOT.state.helperBusy || consumeBusyAlert()) {
+          log('Watchdog: helper/magselect/alert — сброс окон', 'err');
+          BOT.state.helperBusy = false;
+          BOT.state.helperFailUntil = Date.now() + 8000;
+          dismissBattleDialogs(win);
+          try {
+            closeMagbookWin(
+              { via: 'iframe', iframe: win.document && win.document.getElementById('k5-magbook') },
+              true
+            );
+          } catch (eW) {}
+        }
+      }
       if (!isBattleWin(win)) {
         log('Бой завершён');
         BOT.state.lastFightEnd = Date.now();
+        BOT.state.helperBusy = false;
         return 'done';
       }
       const st = getBattleState(win);
@@ -6024,8 +6365,23 @@
     await sleep(2000);
   }
 
+  function shouldStopSession(win) {
+    if (!(BOT.state.fightSessionLimit > 0 && BOT.state.fightSessionStart)) return false;
+    if (Date.now() - BOT.state.fightSessionStart <= BOT.state.fightSessionLimit) return false;
+    // НЕ останавливаться, если персонаж в бою — доигрываем
+    if (isBattleWin(win || getActWin())) {
+      if (!BOT.state.sessionExpirePending) {
+        BOT.state.sessionExpirePending = true;
+        log('Сессия: время вышло, но идёт бой — доигрываем');
+      }
+      return false;
+    }
+    return true;
+  }
+
   async function chaosTick() {
     if (!flagGet(FLAG.chaos) || flagGet(FLAG.captcha)) return;
+    BOT.state.lastTickAt = Date.now();
     watchCaptcha();
     let win = getActWin();
 
@@ -6039,14 +6395,7 @@
         if (pauseNeed > 0 && BOT.state.lastFightEnd) {
           /* уже в бою — не ждём */
         }
-        if (BOT.state.fightSessionLimit > 0 && BOT.state.fightSessionStart) {
-          if (Date.now() - BOT.state.fightSessionStart > BOT.state.fightSessionLimit) {
-            if (!BOT.state.sessionExpirePending) {
-              BOT.state.sessionExpirePending = true;
-              log('Лимит сессии — доигрываю текущий бой, потом стоп');
-            }
-          }
-        }
+        shouldStopSession(win);
         await runBattleLoop(win);
         if (BOT.state.sessionExpirePending) {
           log('Бой окончен — стоп по лимиту сессии', 'ok');
@@ -6067,20 +6416,12 @@
       return;
     }
 
-    if (BOT.state.sessionExpirePending) {
+    if (BOT.state.sessionExpirePending || shouldStopSession(win)) {
       log('Лимит сессии — стоп хаосов (вне боя)');
       BOT.state.sessionExpirePending = false;
       flagSet(FLAG.chaos, false);
       updateUi();
       return;
-    }
-    if (BOT.state.fightSessionLimit > 0 && BOT.state.fightSessionStart) {
-      if (Date.now() - BOT.state.fightSessionStart > BOT.state.fightSessionLimit) {
-        log('Лимит боевой сессии — стоп хаосов');
-        flagSet(FLAG.chaos, false);
-        updateUi();
-        return;
-      }
     }
 
     if (isBigForestUi(win)) {

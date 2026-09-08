@@ -44,7 +44,7 @@ function extractFunction(name) {
 }
 
 console.log('--- static: goto smooth ---');
-ok('S1 version 1.2.34', /@version\s+1\.2\.3[34]/.test(src) && /VERSION = '1\.2\.3[34]'/.test(src));
+ok('S1 version 1.2.35', /@version\s+1\.2\.3[45]/.test(src) && /VERSION = '1\.2\.3[45]'/.test(src));
 ok('S2 longHop branch', /const longHop =/.test(src) && /dest\.fromRadar/.test(src));
 ok('S3 longHop prefers dest cellGotoId', /if \(longHop\) \{[\s\S]*?cellGotoId\(win, dest\.x, dest\.y\)/.test(src));
 ok('S4 longHop falls back to farthest path id', /for \(let j = path\.length - 1; j >= 0; j--\)/.test(src));

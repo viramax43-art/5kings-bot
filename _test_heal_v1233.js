@@ -47,6 +47,8 @@ const prelude = [
   'magbookRowSlice',
   'magbookHtmlToBlob',
   'collectMagbookSpellsFromHtml',
+  'normalizeItemName',
+  'spellMatchesPattern',
   'isHealSpellBlob',
   'isHelperBlob',
   'pickMagbookSpell',
@@ -55,13 +57,13 @@ const prelude = [
   .join('\n');
 const fns = new Function(
   prelude +
-    '; return { magbookHtmlToBlob, collectMagbookSpellsFromHtml, isHealSpellBlob, isHelperBlob, pickMagbookSpell };'
+    '; return { magbookHtmlToBlob, collectMagbookSpellsFromHtml, isHealSpellBlob, isHelperBlob, pickMagbookSpell, spellMatchesPattern };'
 )();
 
 console.log('--- heal from img title ---');
-ok('H1 version 1.2.34', /@version\s+1\.2\.3[34]/.test(src));
+ok('H1 version 1.2.35', /@version\s+1\.2\.3[45]/.test(src));
 ok('H2 magbookHtmlToBlob', /function magbookHtmlToBlob/.test(src));
-ok('H3 healSpell no \\\\w', /healSpell: 'восстанов\|здоровье/.test(src) && !/healSpell: 'восстанов\\\\w/.test(src));
+ok('H3 healSpell восстанови', /healSpell: 'восстанови\|/.test(src));
 
 const liveLike =
   '<tr height="100" class=item><td align="left" valign="top" nowrap>' +

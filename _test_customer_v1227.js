@@ -24,7 +24,7 @@ console.log('--- 1. экипировка: не кирка/броня кажды�
 ok('1a bag skips armor via bagRowIsTool', /bagRowIsTool/.test(src) && /шлем|амулет|лат/.test(src));
 ok('1b no "click any Одеть"', !/const any = win\.document\.querySelector\(/.test(src));
 ok('1c basket only if not already basket', /equippedToolKind !== 'basket'/.test(src));
-ok('1d pick only copper/iron/gold', /wantPick[\s\S]{0,180}kind === 'copper'/.test(src));
+ok('1d pick via TOOL_MAP copper', /TOOL_MAP[\s\S]*?copper:[\s\S]*?kind: 'pick'/.test(src));
 ok('1e bag throttle 20s', /lastEquipTryAt \|\| 0\) < 20000/.test(src));
 ok('1f mushroom does not open bag if basket on', /equippedToolKind !== 'basket'/.test(src) && /корзина грибника/.test(src));
 
@@ -60,7 +60,7 @@ ok('B2 clone again next turn', /wasOurTurn/.test(src) && /можно клони�
 ok('B3 clone on field does not lock fight', !/if \(battleHasOwnHelper/.test(src));
 ok('B4 no 25s lock after clone', !/helperFailUntil = Date\.now\(\) \+ 25000/.test(src));
 
-ok('V version 1.2.34', /@version\s+1\.2\.34/.test(src) && /VERSION = '1\.2\.34'/.test(src));
+ok('V version 1.2.35', /@version\s+1\.2\.35/.test(src) && /VERSION = '1\.2\.35'/.test(src));
 
 console.log('--- 8. радар / бой-таймер / точка ---');
 ok('8a radar default on', /useRadar: true/.test(src) && !/cfg\.forest\.useRadar = false/.test(src));
@@ -87,7 +87,7 @@ ok('9i magbook iframe only', /Только iframe/.test(src) && /left:-4000px/.t
   const m = src.match(/function launchMagselect\([\s\S]*?\n  function magselectLooksReady/);
   ok('9j launchMagselect no goRC', !!(m && !/goRC/.test(m[0])));
 }
-ok('9k session finish battle', /sessionExpirePending/.test(src) && /доигрываю текущий бой/.test(src));
+ok('9k session finish battle', /sessionExpirePending/.test(src) && /доигрываем/.test(src));
 ok('9l session 20–120', /sessionMinMin: 20/.test(src) && /sessionMaxCap: 120/.test(src) && /случайно 20–120/.test(src));
 
 console.log('\nCustomer contracts: ' + passed + ' PASS, ' + failed.length + ' FAIL');

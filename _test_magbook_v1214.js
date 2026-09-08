@@ -37,6 +37,8 @@ ${extractFunction('magbookHtmlToBlob')}
 ${extractFunction('collectMagbookSpellsFromHtml')}
 ${extractFunction('mergeMagbookSpells')}
 ${extractFunction('pickMagbookSpell')}
+${extractFunction('normalizeItemName')}
+${extractFunction('spellMatchesPattern')}
 ${extractFunction('isHelperBlob')}
 ${extractFunction('isHealSpellBlob')}
 ${extractFunction('magselectLooksReady')}
@@ -156,7 +158,7 @@ ok(
 );
 
 console.log('--- source contracts ---');
-ok('S1 version 1.2.34', /@version\s+1\.2\.3[34]/.test(src) && /VERSION = '1\.2\.3[34]'/.test(src));
+ok('S1 version 1.2.35', /@version\s+1\.2\.3[45]/.test(src) && /VERSION = '1\.2\.3[45]'/.test(src));
 ok('S2 large iframe', /width:850px;height:650px/.test(src) && !/width:1px;height:1px/.test(src));
 ok('S3 page extras', /page=2/.test(src) && /mode=1/.test(src) && /magbookClickReveal/.test(src));
 ok('S4 helperFormId cfg', /helperFormId:\s*''/.test(src) && /preferFormId: cfg\.helperFormId/.test(src));
