@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "5Kings Bot",
+  "version": "1.2.11",
+  "description": "Лес + хаосы 5kings.ru. Обход блокировки Tampermonkey в Chrome 138+.",
+  "content_scripts": [
+    {
+      "matches": ["*://5kings.ru/*", "*://*.5kings.ru/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    }
+  ]
+}

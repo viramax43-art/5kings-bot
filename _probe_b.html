@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="ru" style="height:100%;"><head>
+<link rel="shortcut icon" href="/int_images/favicon.png" type="image/png">
+<TITLE>5kings.ru - Средиземье. Эгларест</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=windows-1251">
+<script src="jquery-2.1.3.js"></script>
+<link rel=STYLESHEET type=text/css href="styles_seryi.css?xdac=8.08098555555667">    
+<script src="intscript.js?xdac=8.02618968433837" type="text/javascript"></script> 
+<script language="JavaScript" type="text/javascript">
+<!--
+parent.fsetTime(12,14,15);
+if(top.frames['d_pers'])
+{
+var nd={"id":960792,"sex":"m","nk":"Игрок121323323","lvl":0,"rc":1,"pic":"https://5kings.ru/resources/pers/m11.gif","lftm":"20450","mmp":0,"mhp":25,"lpc":"fistr.gif","rpc":"fistr.gif","dst":0,"dsk":0,"dhd":0,"aht":0,"lrg":1,"rrg":1,"lnm":"кулаки","rnm":"кулаки","bks":16,"showsys":0,"mpic":"https://m.5kings.ru/resources/pers/m11.gif","pet":0,"frc":"Hm","str":3,"dex":3,"rct":3,"ang":3,"lck":3,"con":3,"itl":0,"ob_lck":10,"ob_rpl":10,"ob_crt":5,"ob_ddg":5,"ac_head":0,"ac_body":0,"ac_foot":0,"ac_lhand":0,"ac_rhand":0,"sk_fist":5,"sk_armr":0,"sk_weap":0,"sk_miss":5,"str_e":0,"dex_e":0,"rct_e":0,"ang_e":0,"lck_e":0,"itl_e":0,"ob_lck_e":0,"ob_rpl_e":0,"ob_crt_e":0,"ob_ddg_e":0,"sk_fist_e":0,"sk_armr_e":0,"sk_weap_e":0,"sk_miss_e":0,"rt":3.85714285714286,"lrt":1786180454,"p_str":3,"p_dex":3,"p_rct":3,"p_ang":3,"p_lck":3,"p_con":3,"p_itl":0,"p_ob_lck":10,"p_ob_rpl":10,"p_ob_crt":5,"p_ob_ddg":5,"p_sk_fist":5,"p_sk_armr":0,"p_sk_weap":0,"p_sk_miss":5,"dtxt":"<table><tr><td>Наличность:</td><td><nobr><img src='int_images/serebro.gif' alt='Серебряные эглары' title='Серебряные эглары'>&nbsp;<b ID='my_cash'>0.00</b></nobr></td></tr><tr><td> </td><td><nobr><img src='int_images/zoloto.gif' alt='Золотые эглары' title='Золотые эглары'>&nbsp;<font class='gold'>0.00</font></nobr></td></tr><tr><td> </td><td><nobr><img src='int_images/ap2.gif' alt='Очки Активности' title='Очки Активности'>&nbsp;<font class='gold'>0.00</font></nobr></td></tr><tr><td>Побед:</td><td><b>0</b></td></tr><tr><td>Смертей:</td><td><b>0</b></td></tr><tr><td>Опыт:</td><td><b>0</b></td></tr><tr><td>Cлед. АП:</td><td><b>100</b></td></tr><tr><td>Cлед. уровень:</td><td><b>200</b></td></tr><tr><td>АПов до уровня:</td><td><b>1</b></td></tr><tr><td>Доступно доблести:</td><td><b></b></td></tr><tr><td>Звание:</td><td><img width='13' height='13' border='0' src='bf/rank/rank0.gif' title='Рекрут' alt='Рекрут'>&nbsp;(&nbsp;<b></b>&nbsp;)</td></tr><tr><td>След. звание:</td><td><img width='13' height='13' border='0' src='bf/rank/rank1.gif' title='Солдат' alt='Солдат'>&nbsp;(&nbsp;<b>200</b>&nbsp;)</td></tr><tr><td>Употреблено снадобий:</td><td><b>0+<font class=uvor>0</font>+<font class=blue>0</font>+<font style='color:#ce2ad9'>0</font></b></td></tr></table>","hptm":600,"mptm":1200,"sttm":1,"hp":0,"mp":0,"ttm":1786180454};
+var now=Math.floor((new Date()).getTime()/1000+.5);
+nd.dCTm=1786180454-now;
+setTimeout("top.frames['d_pers'].make(nd)",200)
+}
+
+// -->
+</script>
+</head>
+<body style="height:100%;-webkit-overflow-scrolling: touch; background: url(/int_images_seryi/main_bg.jpg) repeat;">
+<div id="for_help" style="position: absolute;"></div>
+<div id="for_arr" style="position: absolute;"></div>
+
+
+<table cellpadding=0 cellspacing=0 width=100% height=100% border=0>
+
+
+<script language="JavaScript" type="text/javascript">
+<!--
+top.preRoll("","Эгларест: Комната Начинающих #1");
+//-->
+</script>
+<tr><td colspan=2 height=99% style="padding-left:10px;" valign=top>
+<script language="javascript">	
+<!--
+function actReload()
+{
+if(!window.refreshed)
+{
+window.refreshed=true
+location.href='arena_room_1_bmode_1_lvl_0_smode_0_itype_0.html'
+}
+}
+
+function rPress(rname,rval)
+{
+var oldVal = jQuery('#'+rname).val();
+byid(rname).value=rval;
+byid(rname+(1-rval)).src = 'img/ulist-0.gif';
+byid(rname+(rval)).src = 'img/ulist-1.gif';
+if (rname == 'canbot' && oldVal != rval && 0)
+{
+if (rval == 1)
+{
+jQuery('#max_reit').html('<td colspan="3"></td>');
+}
+else
+{
+var h = '<td>Максимальный чистый рейтинг (без учета уровня) игроков:</td><td colspan="2">';
+h += '<select name="Battle{maxreit}"><option value="0" selected>Без ограничений</option>';
+for (var r=1000; r<=2000; r+=200)
+{
+h += '<option value='+r+'>'+r+'</option>';
+}
+h += '</select></td>';
+jQuery('#max_reit').html(h);
+}
+}
+}
+
+function chvis(val)
+{ 
+byid(pos1).style.display=(val?'none':''); 
+byid(pos2).style.display=(val?'none':''); 
+byid(obst).style.display=(val?'none':''); 
+}
+
+function ShowDsc()
+{
+val = byid("tdsc").style.display;
+byid("tdsc").style.display=(val?'':'none'); 
+byid("tdscbtn").value=(val?'Правила <<':'Правила >>'); 
+}
+
+function partnerBattles(nick)
+{
+document.forms['arena'].elements['unick2'].value=nick;
+document.forms['arena'].elements['statistics'].checked=0;
+document.forms['arena'].submit();
+}
+var Animation = 
+{
+'stay0' : 	{
+'src' : 'stay_',
+'imgs' : {},
+'steps' : {'h':1,'o':1,'g':1,'e':1,'d':1,'b':1,'n':1},
+'w' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'h' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'delta_x' : {'h':-31,'o':-24,'g':-24,'e':-24,'d':-24,'b':-24,'n':-24},
+'delta_y' : {'h':-43,'o':-37,'g':-37,'e':-37,'d':-37,'b':-37,'n':-37},
+                    'freq' : 1,
+                    'infinite' : 1
+},
+'stay1' : 	{
+'src' : 'stay_',
+'imgs' : {},
+'steps' : {'h':1,'o':1,'g':1,'e':1,'d':1,'b':1,'n':1},
+'w' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'h' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'delta_x' : {'h':-24,'o':-24,'g':-24,'e':-24,'d':-24,'b':-24,'n':-24},
+'delta_y' : {'h':-37,'o':-37,'g':-37,'e':-37,'d':-37,'b':-37,'n':-37},
+                    'freq' : 1,
+                    'infinite' : 1
+},
+'izgotovka' : 	{
+'src' : 'izgotovka_',
+'imgs' : {},
+'steps' : {'h':29,'o':20,'g':23,'e':29,'d':25,'b':19,'n':18},
+'w' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'h' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'delta_x' : {'h':-15,'o':-15,'g':-15,'e':-15,'d':-15,'b':-15,'n':-15},
+'delta_y' : {'h':-25,'o':-25,'g':-25,'e':-25,'d':-25,'b':-25,'n':-25},
+                    'freq' : 1,
+                    'infinite' : 0
+},
+'go' : 		{
+'src' : 'go_',
+'imgs' : {},
+'steps' : {'h':33,'o':27,'g':22,'e':25,'d':20,'b':20,'n':22},
+'w' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'h' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'delta_x' : {'h':-15,'o':-15,'g':-15,'e':-15,'d':-15,'b':-15,'n':-15},
+'delta_y' : {'h':-25,'o':-25,'g':-25,'e':-25,'d':-25,'b':-25,'n':-25},
+                    'freq' : 1,
+                    'infinite' : 1
+},
+'atack' : 	{
+'src' : 'atack_',
+'imgs' : {},
+'steps' : {'h':30,'o':36,'g':30,'e':25,'d':31,'b':21,'n':26},
+'w' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'h' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'delta_x' : {'h':-15,'o':-15,'g':-15,'e':-15,'d':-15,'b':-15,'n':-15},
+'delta_y' : {'h':-25,'o':-25,'g':-25,'e':-25,'d':-25,'b':-25,'n':-25},
+                    'freq' : 1,
+                    'infinite' : 0
+},
+    'cast'  : 	{
+'src' : 'cast_',
+'imgs' : {},
+'steps' : {'h':28,'o':28,'g':28,'e':28,'d':28,'b':28,'n':28},
+'w' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'h' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'delta_x' : {'h':-15,'o':-15,'g':-15,'e':-15,'d':-15,'b':-15,'n':-15},
+'delta_y' : {'h':-25,'o':-25,'g':-25,'e':-25,'d':-25,'b':-25,'n':-25},
+                    'freq' : 1,
+                    'infinite' : 0
+},
+    'freeze0' : {
+'src' : 'freeze_',
+'imgs' : {},
+'steps' : {'h':1,'o':1,'g':1,'e':1,'d':1,'b':1,'n':1},
+'w' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'h' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'delta_x' : {'h':-15,'o':-15,'g':-15,'e':-15,'d':-15,'b':-15,'n':-15},
+'delta_y' : {'h':-25,'o':-25,'o':-25,'e':-25,'d':-25,'b':-25,'n':-25},
+                    'freq' : 1,
+                    'infinite' : 1
+},
+    'freeze1' : {
+'src' : 'freeze_',
+'imgs' : {},
+'steps' : {'h':1,'o':1,'g':1,'e':1,'d':1,'b':1,'n':1},
+'w' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'h' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'delta_x' : {'h':-15,'o':-15,'g':-15,'e':-15,'d':-15,'b':-15,'n':-15},
+'delta_y' : {'h':-25,'o':-25,'g':-25,'e':-25,'d':-25,'b':-25,'n':-25},
+                    'freq' : 1,
+                    'infinite' : 1
+},
+    'come'  : 	{
+'src' : 'come_',
+'imgs' : {},
+'steps' : {'h':26,'o':26,'g':26,'e':26,'d':26,'b':26,'n':26},
+'w' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'h' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'delta_x' : {'h':-15,'o':-15,'g':-15,'e':-15,'d':-15,'b':-15,'n':-15},
+'delta_y' : {'h':-25,'o':-25,'g':-25,'e':-25,'d':-25,'b':-25,'n':-25},
+                    'freq' : 1,
+                    'infinite' : 0
+},
+    'out'  : 	{
+'src' : 'out_',
+'imgs' : {},
+'steps' : {'h':28,'o':28,'g':28,'e':21,'d':28,'b':28,'n':28},
+'w' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'h' : {'h':100,'o':100,'g':100,'e':100,'d':100,'b':100,'n':100},
+'delta_x' : {'h':-15,'o':-15,'g':-15,'e':-15,'d':-15,'b':-15,'n':-15},
+'delta_y' : {'h':-25,'h':-25,'g':-25,'e':-25,'d':-25,'b':-25,'n':-25},
+                    'freq' : 1,
+                    'infinite' : 0
+},
+    'freezeo' :    {
+                        'src' : '',
+                        'imgs' : {},
+                        'w' : 35,
+                        'h' : 40,
+                        'delta_x' : 0,
+                        'delta_y' : 0,
+                    },
+    'stayo' :    {
+                        'src' : '',
+                        'imgs' : {},
+                        'w' : 35,
+                        'h' : 40,
+                        'delta_x' : 3,
+                        'delta_y' : 3,
+                    },
+                
+};
+
+var Static = 	{
+'wm' : 	{
+'1' : {'w' : 25, 'h' : 111, 'delta_x' : 8, 'delta_y' : -50, 'img' : {}},
+'2' : {'w' : 50, 'h' : 29, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+'3' : {'w' : 44, 'h' : 26, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+'4' : {'w' : 48, 'h' : 53, 'delta_x' : 0, 'delta_y' : -5, 'img' : {}},
+'5' : {'w' : 52, 'h' : 34, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+'6' : {'w' : 52, 'h' : 34, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+'7' : {'w' : 56, 'h' : 30, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+'8' : {'w' : 43, 'h' : 56, 'delta_x' : 0, 'delta_y' : -20, 'img' : {}},
+'9' : {'w' : 48, 'h' : 37, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+'10' : {'w' : 43, 'h' : 56, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+'11' : {'w' : 48, 'h' : 37, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+},
+                    'obst' : {
+                                '1' : {'w' : 37, 'h' : 42, 'delta_x' : 2, 'delta_y' : 0, 'img' : {}},
+                                '2' : {'w' : 41, 'h' : 34, 'delta_x' : 0, 'delta_y' : 6, 'img' : {}},
+                                '3' : {'w' : 41, 'h' : 34, 'delta_x' : 0, 'delta_y' : 6, 'img' : {}},
+                                '4' : {'w' : 38, 'h' : 44, 'delta_x' : 0, 'delta_y' : -4, 'img' : {}},
+                                '5' : {'w' : 34, 'h' : 32, 'delta_x' : 3, 'delta_y' : 7, 'img' : {}},
+                                '6' : {'w' : 41, 'h' : 28, 'delta_x' : 0, 'delta_y' : 7, 'img' : {}},
+                                '7' : {'w' : 41, 'h' : 28, 'delta_x' : 0, 'delta_y' : 7, 'img' : {}},
+                                '8' : {'w' : 38, 'h' : 36, 'delta_x' : 0, 'delta_y' : 7, 'img' : {}},
+                                '9' : {'w' : 40, 'h' : 25, 'delta_x' : 0, 'delta_y' : 15, 'img' : {}},
+                                '10' : {'w' : 41, 'h' : 33, 'delta_x' : 0, 'delta_y' : 15, 'img' : {}},
+                                '11' : {'w' : 38, 'h' : 36, 'delta_x' : 1, 'delta_y' : 10, 'img' : {}},
+                                '12' : {'w' : 30, 'h' : 44, 'delta_x' : -2, 'delta_y' : -1, 'img' : {}},
+                                '13' : {'w' : 41, 'h' : 39, 'delta_x' : 0, 'delta_y' : 10, 'img' : {}},
+                                '14' : {'w' : 34, 'h' : 28, 'delta_x' : 0, 'delta_y' : 10, 'img' : {}},
+                                '15' : {'w' : 39, 'h' : 39, 'delta_x' : 0, 'delta_y' : 7, 'img' : {}},
+                                '16' : {'w' : 41, 'h' : 33, 'delta_x' : -2, 'delta_y' : 2, 'img' : {}},
+                                '17' : {'w' : 35, 'h' : 41, 'delta_x' : 6, 'delta_y' : -1, 'img' : {}},
+                                '18' : {'w' : 23, 'h' : 42, 'delta_x' : 14, 'delta_y' : 4, 'img' : {}},
+                                '19' : {'w' : 23, 'h' : 42, 'delta_x' : 14, 'delta_y' : 1, 'img' : {}},
+                                '20' : {'w' : 30, 'h' : 46, 'delta_x' : 12, 'delta_y' : 6, 'img' : {}},
+                                '21' : {'w' : 30, 'h' : 41, 'delta_x' : 10, 'delta_y' : 7, 'img' : {}},
+                                '22' : {'w' : 28, 'h' : 41, 'delta_x' : -5, 'delta_y' : 4, 'img' : {}},
+                                '23' : {'w' : 40, 'h' : 42, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},                                
+                                '24' : {'w' : 32, 'h' : 38, 'delta_x' : -1, 'delta_y' : 0, 'img' : {}},
+                                '25' : {'w' : 41, 'h' : 42, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '26' : {'w' : 41, 'h' : 40, 'delta_x' : 0, 'delta_y' : 2, 'img' : {}},
+                                '27' : {'w' : 36, 'h' : 47, 'delta_x' : 5, 'delta_y' : 0, 'img' : {}},
+                                '28' : {'w' : 45, 'h' : 42, 'delta_x' : -1, 'delta_y' : 0, 'img' : {}},
+                                '29' : {'w' : 43, 'h' : 35, 'delta_x' : -1, 'delta_y' : 7, 'img' : {}},
+                                '30' : {'w' : 45, 'h' : 35, 'delta_x' : -3, 'delta_y' : 7, 'img' : {}},
+                                '31' : {'w' : 41, 'h' : 38, 'delta_x' : -3, 'delta_y' : 4, 'img' : {}},
+                                '32' : {'w' : 41, 'h' : 29, 'delta_x' : 0, 'delta_y' : 11, 'img' : {}},
+                                '33' : {'w' : 41, 'h' : 35, 'delta_x' : 0, 'delta_y' : 11, 'img' : {}},
+                                '34' : {'w' : 35, 'h' : 31, 'delta_x' : 0, 'delta_y' : 11, 'img' : {}},
+                                '35' : {'w' : 33, 'h' : 42, 'delta_x' : 5, 'delta_y' : 0, 'img' : {}},
+                                '36' : {'w' : 35, 'h' : 43, 'delta_x' : -7, 'delta_y' : 0, 'img' : {}},
+                                '37' : {'w' : 41, 'h' : 33, 'delta_x' : -3, 'delta_y' : 10, 'img' : {}},
+                                '38' : {'w' : 38, 'h' : 37, 'delta_x' : -2, 'delta_y' : 10, 'img' : {}},
+                                '39' : {'w' : 34, 'h' : 42, 'delta_x' : 6, 'delta_y' : -1, 'img' : {}},
+                                '40' : {'w' : 28, 'h' : 44, 'delta_x' : 14, 'delta_y' : 0, 'img' : {}},
+                                '41' : {'w' : 26, 'h' : 44, 'delta_x' : -7, 'delta_y' : 3, 'img' : {}},
+                                '42' : {'w' : 86, 'h' : 42, 'delta_x' : -8, 'delta_y' : 1, 'img' : {}},
+                                '43' : {'w' : 38, 'h' : 35, 'delta_x' : 2, 'delta_y' : 8, 'img' : {}},
+                                '44' : {'w' : 26, 'h' : 42, 'delta_x' : 15, 'delta_y' : 4, 'img' : {}},
+                                '45' : {'w' : 33, 'h' : 43, 'delta_x' : 12, 'delta_y' : 0, 'img' : {}},
+                                '46' : {'w' : 50, 'h' : 44, 'delta_x' : -4, 'delta_y' : 0, 'img' : {}},
+                                '47' : {'w' : 35, 'h' : 30, 'delta_x' : 2, 'delta_y' : 10, 'img' : {}},
+                                '48' : {'w' : 37, 'h' : 32, 'delta_x' : 2, 'delta_y' : 8, 'img' : {}},
+                                '49' : {'w' : 24, 'h' : 26, 'delta_x' : 16, 'delta_y' : 15, 'img' : {}},
+                                '50' : {'w' : 26, 'h' : 44, 'delta_x' : -4, 'delta_y' : -2, 'img' : {}},
+                                '51' : {'w' : 38, 'h' : 44, 'delta_x' : 10, 'delta_y' : 1, 'img' : {}},
+                                '52' : {'w' : 51, 'h' : 41, 'delta_x' : -12, 'delta_y' : -6, 'img' : {}},
+                                '53' : {'w' : 41, 'h' : 39, 'delta_x' : -2, 'delta_y' : 0, 'img' : {}},
+                                '54' : {'w' : 54, 'h' : 43, 'delta_x' : -3, 'delta_y' : 3, 'img' : {}},
+                                '55' : {'w' : 39, 'h' : 42, 'delta_x' : -1, 'delta_y' : 3, 'img' : {}},
+                                '56' : {'w' : 22, 'h' : 44, 'delta_x' : -2, 'delta_y' : 0, 'img' : {}},
+                                '57' : {'w' : 25, 'h' : 44, 'delta_x' : 16, 'delta_y' : -3, 'img' : {}},
+                                '58' : {'w' : 48, 'h' : 40, 'delta_x' : -6, 'delta_y' : -1, 'img' : {}},
+                                '59' : {'w' : 48, 'h' : 40, 'delta_x' : -4, 'delta_y' : 0, 'img' : {}},
+                                '60' : {'w' : 25, 'h' : 44, 'delta_x' : -2, 'delta_y' : -2, 'img' : {}},
+                                '61' : {'w' : 22, 'h' : 44, 'delta_x' : 18, 'delta_y' : 1, 'img' : {}},
+                                '62' : {'w' : 39, 'h' : 42, 'delta_x' : 1, 'delta_y' : 4, 'img' : {}},
+                                '63' : {'w' : 54, 'h' : 43, 'delta_x' : -11, 'delta_y' : 4, 'img' : {}},
+                                '64' : {'w' : 41, 'h' : 39, 'delta_x' : 1, 'delta_y' : 1, 'img' : {}},
+                                '65' : {'w' : 51, 'h' : 41, 'delta_x' : -3, 'delta_y' : -4, 'img' : {}},
+                                '66' : {'w' : 38, 'h' : 44, 'delta_x' : -8, 'delta_y' : 5, 'img' : {}},
+                                '67' : {'w' : 26, 'h' : 44, 'delta_x' : 18, 'delta_y' : 2, 'img' : {}},
+                                '68' : {'w' : 24, 'h' : 26, 'delta_x' : 0, 'delta_y' : 19, 'img' : {}},
+                                '69' : {'w' : 56, 'h' : 46, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '70' : {'w' : 41, 'h' : 44, 'delta_x' : 2, 'delta_y' : -7, 'img' : {}},
+                                '71' : {'w' : 51, 'h' : 55, 'delta_x' : -8, 'delta_y' : -2, 'img' : {}},
+                                '72' : {'w' : 38, 'h' : 58, 'delta_x' : 13, 'delta_y' : -15, 'img' : {}},
+                                '73' : {'w' : 44, 'h' : 52, 'delta_x' : -2, 'delta_y' : -17, 'img' : {}},
+                                '74' : {'w' : 34, 'h' : 33, 'delta_x' : -1, 'delta_y' : 3, 'img' : {}},
+                                '75' : {'w' : 54, 'h' : 54, 'delta_x' : -9, 'delta_y' : 3, 'img' : {}},
+                                '76' : {'w' : 36, 'h' : 53, 'delta_x' : 10, 'delta_y' : -1, 'img' : {}},
+                                '77' : {'w' : 47, 'h' : 48, 'delta_x' : -5, 'delta_y' : -9, 'img' : {}},
+                                '78' : {'w' : 53, 'h' : 47, 'delta_x' : -2, 'delta_y' : 2, 'img' : {}},
+                                '79' : {'w' : 62, 'h' : 56, 'delta_x' : -4, 'delta_y' : -13, 'img' : {}},
+                                '80' : {'w' : 54, 'h' : 34, 'delta_x' : -18, 'delta_y' : 5, 'img' : {}},
+                                '81' : {'w' : 55, 'h' : 50, 'delta_x' : -9, 'delta_y' : -5, 'img' : {}},
+                                '82' : {'w' : 75, 'h' : 73, 'delta_x' : 1, 'delta_y' : -26, 'img' : {}},
+                                '83' : {'w' : 33, 'h' : 52, 'delta_x' : 16, 'delta_y' : -2, 'img' : {}},
+                                '84' : {'w' : 42, 'h' : 36, 'delta_x' : -4, 'delta_y' : 1, 'img' : {}},
+                                '85' : {'w' : 40, 'h' : 50, 'delta_x' : 0, 'delta_y' : -5, 'img' : {}},
+                                '86' : {'w' : 38, 'h' : 27, 'delta_x' : 1, 'delta_y' : 12, 'img' : {}},
+                                '87' : {'w' : 39, 'h' : 34, 'delta_x' : 2, 'delta_y' : 4, 'img' : {}},
+                                '88' : {'w' : 49, 'h' : 54, 'delta_x' : -1, 'delta_y' : -9, 'img' : {}},
+                                '89' : {'w' : 58, 'h' : 52, 'delta_x' : -17, 'delta_y' : -5, 'img' : {}},
+                                '90' : {'w' : 42, 'h' : 48, 'delta_x' : -2, 'delta_y' : 0, 'img' : {}},
+                                '91' : {'w' : 42, 'h' : 46, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '92' : {'w' : 40, 'h' : 47, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '93' : {'w' : 41, 'h' : 47, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '94' : {'w' : 41, 'h' : 47, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '95' : {'w' : 41, 'h' : 47, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '96' : {'w' : 42, 'h' : 48, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '97' : {'w' : 40, 'h' : 46, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '98' : {'w' : 40, 'h' : 47, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '99' : {'w' : 43, 'h' : 46, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '100' : {'w' : 59, 'h' : 48, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '101' : {'w' : 60, 'h' : 46, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '102' : {'w' : 41, 'h' : 38, 'delta_x' : 0, 'delta_y' : 10, 'img' : {}},
+                                '103' : {'w' : 41, 'h' : 31, 'delta_x' : -3, 'delta_y' : 10, 'img' : {}},
+                                '104' : {'w' : 41, 'h' : 30, 'delta_x' : -2, 'delta_y' : 10, 'img' : {}},
+                                '105' : {'w' : 41, 'h' : 30, 'delta_x' : -2, 'delta_y' : 10, 'img' : {}},
+                                '106' : {'w' : 41, 'h' : 36, 'delta_x' : -2, 'delta_y' : 10, 'img' : {}},
+                                '107' : {'w' : 41, 'h' : 30, 'delta_x' : -2, 'delta_y' : 10, 'img' : {}},
+                                '108' : {'w' : 41, 'h' : 36, 'delta_x' : -2, 'delta_y' : 10, 'img' : {}},
+                                '109' : {'w' : 41, 'h' : 30, 'delta_x' : -2, 'delta_y' : 10, 'img' : {}},
+                                '110' : {'w' : 41, 'h' : 30, 'delta_x' : -2, 'delta_y' : 10, 'img' : {}},
+                                '111' : {'w' : 41, 'h' : 36, 'delta_x' : -2, 'delta_y' : 10, 'img' : {}},
+                                '112' : {'w' : 21, 'h' : 36, 'delta_x' : 0, 'delta_y' : 10, 'img' : {}},
+                                '113' : {'w' : 18, 'h' : 47, 'delta_x' : 19, 'delta_y' : -1, 'img' : {}},
+                                '114' : {'w' : 14, 'h' : 39, 'delta_x' : 19, 'delta_y' : 4, 'img' : {}},
+                                '115' : {'w' : 41, 'h' : 40, 'delta_x' : 2, 'delta_y' : 2, 'img' : {}},
+                                '116' : {'w' : 27, 'h' : 47, 'delta_x' : 11, 'delta_y' : 0, 'img' : {}},
+                                '117' : {'w' : 20, 'h' : 47, 'delta_x' : 0, 'delta_y' : -1, 'img' : {}},
+                                '118' : {'w' : 19, 'h' : 47, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '119' : {'w' : 20, 'h' : 47, 'delta_x' : 19, 'delta_y' : -2, 'img' : {}},
+                                '120' : {'w' : 24, 'h' : 39, 'delta_x' : 13, 'delta_y' : 8, 'img' : {}},
+                                '121' : {'w' : 17, 'h' : 39, 'delta_x' : 22, 'delta_y' : 6, 'img' : {}},
+                                '122' : {'w' : 26, 'h' : 47, 'delta_x' : 12, 'delta_y' : 0, 'img' : {}},
+                                '123' : {'w' : 41, 'h' : 47, 'delta_x' : 0, 'delta_y' : -1, 'img' : {}},
+                                '124' : {'w' : 41, 'h' : 33, 'delta_x' : -2, 'delta_y' : 8, 'img' : {}},
+                                '125' : {'w' : 41, 'h' : 33, 'delta_x' : -1, 'delta_y' : 8, 'img' : {}},
+                                '126' : {'w' : 41, 'h' : 44, 'delta_x' : 0, 'delta_y' : 1, 'img' : {}},
+                                '127' : {'w' : 19, 'h' : 46, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '128' : {'w' : 42, 'h' : 46, 'delta_x' : 3, 'delta_y' : 0, 'img' : {}},
+                                '129' : {'w' : 41, 'h' : 33, 'delta_x' : 0, 'delta_y' : 8, 'img' : {}},
+                                '130' : {'w' : 41, 'h' : 33, 'delta_x' : 0, 'delta_y' : 8, 'img' : {}},
+                                '131' : {'w' : 41, 'h' : 44, 'delta_x' : 0, 'delta_y' : 4, 'img' : {}},
+                                '132' : {'w' : 21, 'h' : 47, 'delta_x' : -1, 'delta_y' : 0, 'img' : {}},
+                                '133' : {'w' : 21, 'h' : 47, 'delta_x' : 19, 'delta_y' : -2, 'img' : {}},
+                                '134' : {'w' : 32, 'h' : 36, 'delta_x' : 7, 'delta_y' : 0, 'img' : {}},
+                                '135' : {'w' : 17, 'h' : 32, 'delta_x' : 23, 'delta_y' : 2, 'img' : {}},
+                                '136' : {'w' : 32, 'h' : 47, 'delta_x' : 7, 'delta_y' : -2, 'img' : {}},
+                                '137' : {'w' : 23, 'h' : 47, 'delta_x' : 0, 'delta_y' : -1, 'img' : {}},
+                                '138' : {'w' : 22, 'h' : 47, 'delta_x' : -1, 'delta_y' : 0, 'img' : {}},
+                                '139' : {'w' : 23, 'h' : 47, 'delta_x' : 19, 'delta_y' : -2, 'img' : {}},
+                                '140' : {'w' : 18, 'h' : 28, 'delta_x' : 23, 'delta_y' : 10, 'img' : {}},
+                                '141' : {'w' : 19, 'h' : 29, 'delta_x' : 21, 'delta_y' : 6, 'img' : {}},
+                                '142' : {'w' : 33, 'h' : 47, 'delta_x' : 7, 'delta_y' : 0, 'img' : {}},
+                                '143' : {'w' : 41, 'h' : 42, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '144' : {'w' : 41, 'h' : 38, 'delta_x' : 0, 'delta_y' : 4, 'img' : {}},
+                                '145' : {'w' : 41, 'h' : 38, 'delta_x' : 0, 'delta_y' : 4, 'img' : {}},
+                                '146' : {'w' : 41, 'h' : 38, 'delta_x' : 0, 'delta_y' : 4, 'img' : {}},
+                                '147' : {'w' : 40, 'h' : 39, 'delta_x' : -1, 'delta_y' : 3, 'img' : {}},
+                                '148' : {'w' : 38, 'h' : 38, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '149' : {'w' : 41, 'h' : 38, 'delta_x' : 0, 'delta_y' : 1, 'img' : {}},
+                                '150' : {'w' : 41, 'h' : 38, 'delta_x' : 0, 'delta_y' : 1, 'img' : {}},
+                                '151' : {'w' : 41, 'h' : 39, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '152' : {'w' : 27, 'h' : 39, 'delta_x' : -3, 'delta_y' : 0, 'img' : {}},
+                                '1033' : {'w' : 1, 'h' : 1, 'delta_x' : 0, 'delta_y' : 0, 'img' : {}},
+                                '1025' : {'w' : 52, 'h' : 70, 'delta_x' : -5, 'delta_y' : -30, 'img' : {}},
+                                '1026' : {'w' : 52, 'h' : 70, 'delta_x' : -5, 'delta_y' : -30, 'img' : {}},
+                                '1027' : {'w' : 84, 'h' : 105, 'delta_x' : -42, 'delta_y' : -66, 'img' : {}},
+                                '1028' : {'w' : 79, 'h' : 94, 'delta_x' : -40, 'delta_y' : -65, 'img' : {}},
+                                '1029' : {'w' : 25, 'h' : 111, 'delta_x' : 8, 'delta_y' : -50, 'img' : {}},
+                                '1030' : {'w' : 52, 'h' : 70, 'delta_x' : -25, 'delta_y' : -37, 'img' : {}},
+                                '1031' : {'w' : 69, 'h' : 100, 'delta_x' : -23, 'delta_y' : -37, 'img' : {}},
+                                '1032' : {'w' : 92, 'h' : 256, 'delta_x' : -51, 'delta_y' : -175, 'img' : {}},
+                                '1034' : {'w' : 40, 'h' : 75, 'delta_x' : -25, 'delta_y' : -50, 'img' : {}},
+                                '1035' : {'w' : 53, 'h' : 101, 'delta_x' : -27, 'delta_y' : -70, 'img' : {}},
+                                '1036' : {'w' : 79, 'h' : 94, 'delta_x' : -45, 'delta_y' : -65, 'img' : {}},
+                                '1037' : {'w' : 40, 'h' : 33, 'delta_x' : 0, 'delta_y' : 7, 'img' : {}},
+                                '1038' : {'w' : 40, 'h' : 33, 'delta_x' : 0, 'delta_y' : 7, 'img' : {}},
+                            },
+};
+var mrkImg = new Image();
+mrkImg.src = 'img/mrk2.png';
+
+var myCell = new Image();
+myCell.src = 'img/pod.png';
+
+var maxImgs = 1150;
+var count = 0;
+var curPercent = 0;
+
+function CheckFullIMGS()
+{
+    count ++;
+    var tmpPercent = parseInt((count/maxImgs)*100);
+    if (((tmpPercent != curPercent || !jQuery('#downloadStatus').html()) && (tmpPercent < 100)) || (count == maxImgs))
+    {
+        curPercent = tmpPercent;
+        var html = 'Загружено: '+curPercent+'%';
+        jQuery('#downloadStatus').html(html);
+    }
+}
+
+function getBase64Image(img) 
+{
+    var canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+
+    var ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+
+    var dataURL = canvas.toDataURL("image/png");
+
+    return dataURL.replace(/^data:image\/(png|jpg);base64,/, "");
+}
+
+var AllreadyInRun = 0;
+
+function Load3DGraph()
+{
+    var fromBD = 1;
+    var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+    var request = indexedDB.open(BattleBaseName, Battle_DBVersion);
+    request.onerror = function() {
+        console.log('DB onerror');
+    };
+    request.onsuccess = function(event){
+        var db = event.target.result;
+        db.onerror = function(event) { console.log('db onerror2'); };
+        if (!AllreadyInRun) { AllreadyInRun = 1; LoadImgsFrom(db,fromBD,1); }
+    };
+    request.onupgradeneeded = function(event) {
+        var db = event.target.result;
+        if (db.objectStoreNames.contains(BattleStoreName)) {
+            db.deleteObjectStore(BattleStoreName);
+        }
+        if (!db.objectStoreNames.contains(BattleStoreName)) { 
+            db.createObjectStore(BattleStoreName); // создаём хранилище
+        }
+        fromBD = 0;
+    };
+}
+function LoadImgsFrom(db, fromBD, okTransaction) {
+    var db_imgs;
+    var transaction;
+    if (db) { transaction = db.transaction(BattleStoreName, "readonly"); }
+    if (okTransaction && fromBD) { db_imgs = transaction.objectStore(BattleStoreName); }
+    else { db_imgs = transaction.objectStore(BattleStoreName); }
+    if (1) {
+        var tmpArr = ['stay0','stay1','go','freeze0','freeze1'];
+        var imgRacesT = ['h','o','g','e','b','n','d'];
+        var imgRaces = imgRacesT;
+        for (let j = 0; j < imgRaces.length; j++) {
+            let race = imgRaces[j];
+            for (let i = 0; i < tmpArr.length; i++) {
+                let item = tmpArr[i];
+                for (let team=0; team<=1; team++) {
+                    for (let napr=1; napr<=6; napr++) {
+                        let ok_napr = false;
+                        if (item != 'freeze0' && item != 'freeze1') { ok_napr = true; }
+                        else if ((napr == 1 && team == 0) || (napr == 4 && team == 1)) { ok_napr = true; }
+                        if (ok_napr) {
+                            for (let type=2; type<=3; type++) {
+                                for (let moved=0; moved<2; moved++) {
+                                    if ((moved && (item == 'stay1' || item == 'freeze1')) || ((item == 'go' || item == 'stay0' || item == 'freeze0') && !moved)) {
+                                        let img = new Image();
+                                        let src = 'battle_animation/'+race+'/'+Animation[item].src+race+team+napr+type+moved+'.png';
+                                        if (!fromBD) {
+                                            img.src = src+'?dummy='+Battle_DBVersion;
+                                            img.CustomData = {'img': img, 'db_imgs': db_imgs, 'src': src, 'okTransaction': okTransaction, 'db': db, 'item': item, 'race': race, 'team': team, 'napr': napr, 'type': type, 'moved': moved};
+                                            img.onload = function () {
+                                                Animation[this.CustomData.item].imgs[this.CustomData.race+this.CustomData.team+this.CustomData.napr+this.CustomData.type+this.CustomData.moved] = this;
+                                                CheckFullIMGS();
+                                                if (this.CustomData.okTransaction && this.CustomData.db) {
+                                                    let baseCont = getBase64Image(this);
+                                                    this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                                                }
+                                            };
+                                        }
+                                        else {
+                                            let dataImage = db_imgs.get(src);
+                                            dataImage.CustomData = {'img': img, 'db_imgs': db_imgs, 'src': src, 'okTransaction': okTransaction, 'db': db, 'item': item, 'race': race, 'team': team, 'napr': napr, 'type': type, 'moved': moved};
+                                            dataImage.onsuccess = function() {
+                                                if (this.result && this.result != 'data:,') { 
+                                                    this.CustomData.img.src = "data:image/png;base64," + this.result; 
+                                                    Animation[this.CustomData.item].imgs[this.CustomData.race+this.CustomData.team+this.CustomData.napr+this.CustomData.type+this.CustomData.moved] = this.CustomData.img;
+                                                    CheckFullIMGS();
+                                                }
+                                                else {
+                                                    this.CustomData.img.src = this.CustomData.src+'?dummy='+Battle_DBVersion;
+                                                    this.CustomData.img.CustomData = {'img': this.CustomData.img, 'db_imgs': this.CustomData.db_imgs, 'src': this.CustomData.src, 'okTransaction': this.CustomData.okTransaction, 'db': this.CustomData.db, 'item': this.CustomData.item, 'race': this.CustomData.race, 'team': this.CustomData.team, 'napr': this.CustomData.napr, 'type': this.CustomData.type, 'moved': this.CustomData.moved};
+                                                    this.CustomData.img.onload = function () {
+                                                        Animation[this.CustomData.item].imgs[this.CustomData.race+this.CustomData.team+this.CustomData.napr+this.CustomData.type+this.CustomData.moved] = this;
+                                                        CheckFullIMGS();
+                                                        if (this.CustomData.okTransaction && this.CustomData.db) {
+                                                            let baseCont = getBase64Image(this);
+                                                            this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                                                        }
+                                                    };
+                                                }
+                                            };
+                                            dataImage.onerror = function() { 
+                                                this.CustomData.img.src = this.CustomData.src+'?dummy='+Battle_DBVersion;
+                                                this.CustomData.img.CustomData = {'img': this.CustomData.img, 'db_imgs': this.CustomData.db_imgs, 'src': this.CustomData.src, 'okTransaction': this.CustomData.okTransaction, 'db': this.CustomData.db, 'item': this.CustomData.item, 'race': this.CustomData.race, 'team': this.CustomData.team, 'napr': this.CustomData.napr, 'type': this.CustomData.type, 'moved': this.CustomData.moved};
+                                                this.CustomData.img.onload = function () {
+                                                    Animation[this.CustomData.item].imgs[this.CustomData.race+this.CustomData.team+this.CustomData.napr+this.CustomData.type+this.CustomData.moved] = this;
+                                                    CheckFullIMGS();
+                                                    if (this.CustomData.okTransaction && this.CustomData.db) {
+                                                        let baseCont = getBase64Image(this);
+                                                        this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                                                    }
+                                                };
+                                            };
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let tmpArr2 = ['izgotovka','atack','out','come','cast'];
+
+        for (let j = 0; j < imgRaces.length; j++) {
+            let race = imgRaces[j];
+            for (let i = 0; i < tmpArr2.length; i++) {
+                let item = tmpArr2[i];
+                for (let team=0; team<=1; team++) {
+                    for (let napr=1; napr<=6; napr++) {
+                        let ok_napr = false;
+                        if (item != 'out' && item != 'come' && item != 'cast') { ok_napr = true; }
+                        else if ((napr == 1 && team == 0) || (napr == 4 && team == 1)) { ok_napr = true; }
+                        if (ok_napr) {
+                            for (let type=2; type<=3; type++) {
+                                let img = new Image();
+                                let src = 'battle_animation/'+race+'/'+Animation[item].src+race+team+napr+type+'0.png';
+                                if (!fromBD) {
+                                    img.src = src+'?dummy='+Battle_DBVersion; 
+                                    img.CustomData = {'img': img, 'db_imgs': db_imgs, 'src': src, 'okTransaction': okTransaction, 'db': db, 'item': item, 'race': race, 'team': team, 'napr': napr, 'type': type, 'moved': '0'};                                
+                                    img.onload = function () {
+                                        Animation[this.CustomData.item].imgs[this.CustomData.race+this.CustomData.team+this.CustomData.napr+this.CustomData.type+'0'] = this;
+                                        CheckFullIMGS();
+                                        if (this.CustomData.okTransaction && this.CustomData.db) {
+                                            let baseCont = getBase64Image(this);
+                                            this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                                        }
+                                    };
+                                }
+                                else {
+                                    let dataImage = db_imgs.get(src);
+                                    dataImage.CustomData = {'img': img, 'db_imgs': db_imgs, 'src': src, 'okTransaction': okTransaction, 'db': db, 'item': item, 'race': race, 'team': team, 'napr': napr, 'type': type, 'moved': '0'};                                
+                                    dataImage.onsuccess = function() {
+                                        if (this.result && this.result != 'data:,') { 
+                                            this.CustomData.img.src = "data:image/png;base64," + this.result;
+                                            Animation[this.CustomData.item].imgs[this.CustomData.race+this.CustomData.team+this.CustomData.napr+this.CustomData.type+'0'] = this.CustomData.img;
+                                            CheckFullIMGS();
+                                        }
+                                        else {
+                                            this.CustomData.img.src = this.CustomData.src+'?dummy='+Battle_DBVersion;
+                                            this.CustomData.img.CustomData = {'img': this.CustomData.img, 'db_imgs': this.CustomData.db_imgs, 'src': this.CustomData.src, 'okTransaction': this.CustomData.okTransaction, 'db': this.CustomData.db, 'item': this.CustomData.item, 'race': this.CustomData.race, 'team': this.CustomData.team, 'napr': this.CustomData.napr, 'type': this.CustomData.type, 'moved': '0'};
+                                            this.CustomData.img.onload = function () {
+                                                Animation[this.CustomData.item].imgs[this.CustomData.race+this.CustomData.team+this.CustomData.napr+this.CustomData.type+'0'] = this;
+                                                CheckFullIMGS();
+                                                if (this.CustomData.okTransaction && this.CustomData.db) {
+                                                    let baseCont = getBase64Image(this);
+                                                    this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                                                }
+                                            };
+                                        }
+                                    };
+                                    dataImage.onerror = function() { 
+                                        this.CustomData.img.src = this.CustomData.src+'?dummy='+Battle_DBVersion;
+                                        this.CustomData.img.CustomData = {'img': this.CustomData.img, 'db_imgs': this.CustomData.db_imgs, 'src': this.CustomData.src, 'okTransaction': this.CustomData.okTransaction, 'db': this.CustomData.db, 'item': this.CustomData.item, 'race': this.CustomData.race, 'team': this.CustomData.team, 'napr': this.CustomData.napr, 'type': this.CustomData.type, 'moved': '0'};
+                                        this.CustomData.img.onload = function () {
+                                            Animation[this.CustomData.item].imgs[this.CustomData.race+this.CustomData.team+this.CustomData.napr+this.CustomData.type+'0'] = this;
+                                            CheckFullIMGS();
+                                            if (this.CustomData.okTransaction && this.CustomData.db) {
+                                                let baseCont = getBase64Image(this);
+                                                this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                                            }
+                                        };
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for (let i in Static['wm']) {
+        let Wsrc = 'battle_animation2/wm/'+i+'.png';
+        let Wimg = new Image();
+        if (!fromBD) {
+            Wimg.src = Wsrc+'?dummy='+Battle_DBVersion; 
+            Wimg.CustomData = {'img': Wimg, 'db_imgs': db_imgs, 'src': Wsrc, 'okTransaction': okTransaction, 'db': db, 'i': i};                                
+            Wimg.onload = function () {
+                Static['wm'][this.CustomData.i]['img'] = this;
+                CheckFullIMGS();
+                if (this.CustomData.okTransaction && this.CustomData.db) {
+                    let baseCont = getBase64Image(this);
+                    this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                }
+            };
+        }
+        else {
+            let dataImage = db_imgs.get(Wsrc);
+            dataImage.CustomData = {'img': Wimg, 'db_imgs': db_imgs, 'src': Wsrc, 'okTransaction': okTransaction, 'db': db, 'i': i}; 
+            dataImage.onsuccess = function() {
+                if (this.result && this.result != 'data:,') { 
+                    this.CustomData.img.src = "data:image/png;base64," + this.result; 
+                    Static['wm'][this.CustomData.i]['img'] = this.CustomData.img;
+                    CheckFullIMGS();
+                }
+                else {
+                    this.CustomData.img.src = this.CustomData.src+'?dummy='+Battle_DBVersion;
+                    this.CustomData.img.CustomData = {'img': this.CustomData.img, 'db_imgs': this.CustomData.db_imgs, 'src': this.CustomData.src, 'okTransaction': this.CustomData.okTransaction, 'db': this.CustomData.db, 'i': this.CustomData.i};
+                    this.CustomData.img.onload = function () {
+                        Static['wm'][this.CustomData.i]['img'] = this;
+                        CheckFullIMGS();
+                        if (this.CustomData.okTransaction && this.CustomData.db) {
+                            let baseCont = getBase64Image(this);
+                            this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                        }
+                    };
+                }
+            };
+            dataImage.onerror = function() { 
+                this.CustomData.img.src = this.CustomData.src+'?dummy='+Battle_DBVersion;
+                this.CustomData.img.CustomData = {'img': this.CustomData.img, 'db_imgs': this.CustomData.db_imgs, 'src': this.CustomData.src, 'okTransaction': this.CustomData.okTransaction, 'db': this.CustomData.db, 'i': this.CustomData.i};
+                this.CustomData.img.onload = function () {
+                    Static['wm'][this.CustomData.i]['img'] = this;
+                    CheckFullIMGS();
+                    if (this.CustomData.okTransaction && this.CustomData.db) {
+                        let baseCont = getBase64Image(Wimg);
+                        db_imgs2.put(baseCont, Wsrc);
+                    }
+                };
+            };
+        }
+    }
+
+    for(let i in Static['obst']) {
+        let Oimg = new Image();
+        let Osrc = 'battle_animation2/obst/'+i+'.png';
+        if (!fromBD) {
+            Oimg.src = Osrc+'?dummy='+Battle_DBVersion; 
+            Oimg.CustomData = {'img': Oimg, 'db_imgs': db_imgs, 'src': Osrc, 'okTransaction': okTransaction, 'db': db, 'i': i};
+            Oimg.onload = function () {
+                Static['obst'][this.CustomData.i]['img'] = this;
+                CheckFullIMGS();
+                if (this.CustomData.okTransaction && this.CustomData.db) {
+                    let baseCont = getBase64Image(this);
+                    this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                }
+            };
+        }
+        else  {
+            let dataImage = db_imgs.get(Osrc);
+            dataImage.CustomData = {'img': Oimg, 'db_imgs': db_imgs, 'src': Osrc, 'okTransaction': okTransaction, 'db': db, 'i': i}; 
+            dataImage.onsuccess = function() {
+                if (this.result && this.result != 'data:,') { 
+                    this.CustomData.img.src = "data:image/png;base64," + this.result; 
+                    Static['obst'][this.CustomData.i]['img'] = this.CustomData.img;
+                    CheckFullIMGS();
+                }
+                else {
+                    this.CustomData.img.src = this.CustomData.src+'?dummy='+Battle_DBVersion;
+                    this.CustomData.img.CustomData = {'img': this.CustomData.img, 'db_imgs': this.CustomData.db_imgs, 'src': this.CustomData.src, 'okTransaction': this.CustomData.okTransaction, 'db': this.CustomData.db, 'i': this.CustomData.i};
+                    this.CustomData.img.onload = function () {
+                        Static['obst'][this.CustomData.i]['img'] = this;
+                        CheckFullIMGS();
+                        if (this.CustomData.okTransaction && this.CustomData.db) {
+                            let baseCont = getBase64Image(this);
+                            this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                        }
+                    }
+                }
+            };
+            dataImage.onerror = function() { 
+                this.CustomData.img.src = this.CustomData.src+'?dummy='+Battle_DBVersion;
+                this.CustomData.img.CustomData = {'img': this.CustomData.img, 'db_imgs': this.CustomData.db_imgs, 'src': this.CustomData.src, 'okTransaction': this.CustomData.okTransaction, 'db': this.CustomData.db, 'i': this.CustomData.i};
+                this.CustomData.img.onload = function () {
+                    Static['obst'][this.CustomData.i]['img'] = this;
+                    CheckFullIMGS();
+                    if (this.CustomData.okTransaction && this.CustomData.db) {
+                        let baseCont = getBase64Image(this);
+                        this.CustomData.db.transaction(BattleStoreName, "readwrite").objectStore(BattleStoreName).put(baseCont, this.CustomData.src);
+                    }
+                };
+            };
+        }
+    }
+}
+
+//-->
+</script>
+<b class=button><b><input type=button onclick=goRC('place.html') value='На площадь'></b><b><input type=button onclick=goRC('arenax.html') value='В прихожую'></b></b>
+<br>
+<b class=button-a><b><input type=button value=Дуэли></b></b><b class=button><b><input type=button onclick=goRC('arena_room_1_bmode_3.html') value=Хаотические></b></b><b class=button><b><input type=button onclick=goRC('arena_room_1_bmode_36.html') value="Королевские хаоты"></b></b><b class=button><b><input type=button onclick=goRC('arena_room_1_bmode_11.html') value=Коррида></b></b><b class=button><b><input type=button onclick=goRC('arena_room_1_bmode_12.html') value='Дуэль на золото'></b></b>
+<b class=button><b><input type=button onclick=goRC('demons_room_1.html') value='Бои с демонами'></b></b><b class=button><b><input type=button onclick=goRC('arena_room_1_bmode_4.html') value=Текущие></b></b><b class=button><b><input id="finished_battles" type=button onclick=goRC('finished_room_1.lhtml') value=Завершенные></b></b>
+
+<br>
+<b class=button><b><button onclick=actReload() title=Обновить style="position: relative; top: 5px;"><img src="int_images/reload.png" width=14 height=14 alt="" hspace=4 vspace=1></button></b></b>&nbsp;
+<b class=button><b><input id=tdscbtn type=button onclick=ShowDsc() value="Правила &gt;&gt;"></b></b>
+<b class=button><b><input type=button onclick="Load3DGraph()" value='Загрузить 3D графику'></b></b><span style="padding-left: 10px;" id="downloadStatus"></span><br>
+<div id="tdsc" style="display:none">
+<span class=bordo style=width:500px>
+<ol><li>За кулачный бой игрок получает только 50% опыта.</li>
+<li>Если Вы не уверены в том, что за указанное время успеете сделать ход - увеличьте время на ход при подаче заявки.</li></ol></span></div>
+<br><br>
+<table cellpadding=0 cellspacing=2 border=0 class=bordo><form action="arena_room_1_lvl_0_bmode_1.html" method=post>
+<input id='fist' type=hidden name=Battle{fist} value=0>
+<input id='blood' type=hidden name=Battle{blood} value=0>
+<tr><td>Тип боя:</td><td>
+<img id=fist1 width=15 height=15 src='img/ulist-0.gif' onclick=rPress('fist',1)>&nbsp;Кулачный
+</td><td>
+<img id=fist0 width=15 height=15 src='img/ulist-1.gif' onclick=rPress('fist',0)>&nbsp;На&nbsp;оружии
+</td></tr>
+<tr><td width=200>Уровень противника:</td><td width=120>
+Мин:<img src=img/d.gif height=1 width=23 alt=''><select name=Battle{minlvl}><option value=0 selected>0</option><option value=1>1</option><option value=2>2</option><option value=3>3</option><option value=4>4</option><option value=5>5</option><option value=6>6</option><option value=7>7</option><option value=8>8</option><option value=9>9</option><option value=10>10</option><option value=11>11</option><option value=12>12</option><option value=13>13</option><option value=14>14</option><option value=15>15</option><option value=16>16</option><option value=17>17</option><option value=18>18</option><option value=19>19</option><option value=20>20</option><option value=21>21</option><option value=22>22</option><option value=23>23</option><option value=24>24</option><option value=25>25</option><option value=26>26</option><option value=27>27</option><option value=28>28</option><option value=29>29</option><option value=30>30</option><option value=31>31</option><option value=32>32</option><option value=33>33</option><option value=34>34</option><option value=35>35</option><option value=36>36</option><option value=37>37</option><option value=38>38</option><option value=39>39</option><option value=40>40</option><option value=41>41</option><option value=42>42</option><option value=43>43</option><option value=44>44</option><option value=45>45</option><option value=46>46</option><option value=47>47</option><option value=48>48</option><option value=49>49</option><option value=50>50</option></select>
+</td><td>
+Макс:<img src=img/d.gif height=1 width=23 alt=''><select name=Battle{maxlvl}><option value=0>0</option><option value=1>1</option><option value=2>2</option><option value=3>3</option><option value=4>4</option><option value=5>5</option><option value=6>6</option><option value=7>7</option><option value=8>8</option><option value=9>9</option><option value=10>10</option><option value=11>11</option><option value=12>12</option><option value=13>13</option><option value=14>14</option><option value=15>15</option><option value=16>16</option><option value=17>17</option><option value=18>18</option><option value=19>19</option><option value=20>20</option><option value=21>21</option><option value=22>22</option><option value=23>23</option><option value=24>24</option><option value=25>25</option><option value=26>26</option><option value=27>27</option><option value=28>28</option><option value=29>29</option><option value=30>30</option><option value=31>31</option><option value=32>32</option><option value=33>33</option><option value=34>34</option><option value=35>35</option><option value=36>36</option><option value=37>37</option><option value=38>38</option><option value=39>39</option><option value=40>40</option><option value=41>41</option><option value=42>42</option><option value=43>43</option><option value=44>44</option><option value=45>45</option><option value=46>46</option><option value=47>47</option><option value=48>48</option><option value=49>49</option><option value=50 selected>50</option></select>
+</td></tr>
+<tr><td>Время на ход:</td><td colspan=2>
+<select name="Battle{tm}">
+<option value=30 selected>30 сек</option>
+<option value=60>1 мин</option>
+<option value=120>2 мин</option>
+</select></td></tr>
+<tr><td colspan=3><b class=button><b><input type=submit name="actBattle-CreateHeader" value="Подать заявку"></b></b></td></tr>
+            </form></table>
+<b class=button><b><input type=button onclick=goRC('arena_mode_1.html?actBattle-StartBattleWithShadow=1') value='Бой с тенью' style=width:120px></b></b>
+<br><br>
+Показать заявки для уровня:<select name="lvl" onchange='goR("arena_bmode_1_room_1_lvl_"+this.value+".html")'><option value='0' selected>0</option><option value='1'>1</option><option value='2'>2</option><option value='3'>3</option><option value='4'>4</option><option value='5'>5</option><option value='6'>6</option><option value='7'>7</option><option value='8'>8</option><option value='9'>9</option><option value='10'>10</option><option value='11'>11</option><option value='12'>12</option><option value='13'>13</option><option value='14'>14</option><option value='15'>15</option><option value='16'>16</option><option value='17'>17</option><option value='18'>18</option><option value='19'>19</option><option value='20'>20</option><option value='21'>21</option><option value='22'>22</option><option value='23'>23</option><option value='24'>24</option><option value='25'>25</option><option value='26'>26</option><option value='27'>27</option><option value='28'>28</option><option value='29'>29</option><option value='30'>30</option><option value='31'>31</option><option value='32'>32</option><option value='33'>33</option><option value='34'>34</option><option value='35'>35</option><option value='36'>36</option><option value='37'>37</option><option value='38'>38</option><option value='39'>39</option><option value='40'>40</option><option value='41'>41</option><option value='42'>42</option><option value='43'>43</option><option value='44'>44</option><option value='45'>45</option><option value='46'>46</option><option value='47'>47</option><option value='48'>48</option><option value='49'>49</option><option value='50'>50</option></select><br>
+<br><br><br>
+</td></tr>
+
+</table>
+
+<div id="deb"></div>
+
+</body>
+</html>

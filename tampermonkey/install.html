@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>5Kings Bot — установка в Tampermonkey</title>
+  <style>
+    body { font: 16px/1.45 Tahoma, Arial, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 22px; }
+    .box { background: #fff3cd; border: 1px solid #e0c36a; padding: 14px 16px; margin: 16px 0; }
+    .ok { background: #e8f5e9; border-color: #81c784; }
+    .bad { background: #fdecea; border-color: #e57373; }
+    a.btn, button {
+      display: inline-block; background: #1a5c1a; color: #fff; padding: 12px 18px;
+      text-decoration: none; border: 0; font: bold 16px Tahoma; cursor: pointer; margin: 6px 8px 6px 0;
+    }
+    a.btn.sec { background: #333; }
+    ol { padding-left: 22px; }
+    li { margin: 8px 0; }
+    code { background: #f0f0f0; padding: 1px 5px; }
+  </style>
+</head>
+<body>
+  <h1>5Kings Bot v1.2.0 → Tampermonkey</h1>
+  <div class="box bad">
+    <b>Chrome 138+ не запускает скрипты TM</b>, пока не включён тумблер
+    «Разрешить пользовательские скрипты». Без него файл в редакторе сохраняется,
+    но на сайте ничего не происходит.
+  </div>
+  <ol>
+    <li>
+      Откройте
+      <a href="chrome://extensions/?id=dhdgffkkebhmkfjojejmpbldmpobfkfo">страницу Tampermonkey</a>
+      (если ссылка не открывается — вставьте в адресную строку
+      <code>chrome://extensions</code> → Tampermonkey → <b>Подробнее</b>).
+    </li>
+    <li>Включите <b>«Разрешить пользовательские скрипты»</b>. Если TM выключен — включите его.</li>
+    <li>Нажмите кнопку ниже — Tampermonkey предложит установить/обновить скрипт.</li>
+    <li>Откройте <a href="https://5kings.ru/game.html">https://5kings.ru/game.html</a> и обновите страницу (F5). Сверху зелёная полоса, справа панель.</li>
+  </ol>
+  <p>
+    <a class="btn" id="inst" href="/5kings-bot.user.js">Установить / обновить в Tampermonkey</a>
+    <a class="btn sec" href="chrome://extensions/?id=dhdgffkkebhmkfjojejmpbldmpobfkfo">Открыть настройки TM</a>
+  </p>
+  <p class="box ok">Либо вручную: Tampermonkey → создать скрипт → вставить весь файл <code>5kings-bot.user.js</code> (версия 1.2.0) → Ctrl+S.</p>
+</body>
+</html>

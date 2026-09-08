@@ -1,0 +1,26 @@
+{
+  "name": "5kings-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Автономный браузерный бот для 5kings.ru (Playwright)",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "forest": "node src/index.js --mode=forest",
+    "chaos": "node src/index.js --mode=chaos",
+    "both": "node src/index.js --mode=both",
+    "test": "node _test_tz.js",
+    "test:tz": "node _test_tz.js",
+    "test:live": "node _test_tz.js --live",
+    "test:forest": "node _test_tz.js --live=forest",
+    "test:chaos": "node _test_tz.js --live=chaos",
+    "install:browsers": "npx playwright install chromium"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "playwright": "^1.50.1"
+  }
+}
