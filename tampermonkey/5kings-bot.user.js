@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         5Kings Bot
 // @namespace    https://5kings.ru/
-// @version      1.2.36
+// @version      1.2.37
 // @description  Лес + королевские хаосы 5kings.ru. Только ТЗ. Локальный userscript.
 // @author       freelance
 // @match        http://5kings.ru/*
@@ -71,7 +71,7 @@
     }
   }
 
-  const VERSION = '1.2.36';
+  const VERSION = '1.2.37';
 
   try {
     console.log('%c[5k-bot] executed v' + VERSION + ' @ ' + location.href, 'background:#1a5c1a;color:#fff;padding:4px');
@@ -4180,10 +4180,12 @@
         try {
           href = String((selWin.location && selWin.location.href) || '');
         } catch (eH) {}
-        const errTxt = battleOverlayErrorText(selWin) + ' ' + battleOverlayErrorText(battleWin) + ' ' + body;
+        // overlay = modal only (body UI has «свободн/выбер» на гексах → false positive)
+        const overlayTxt = battleOverlayErrorText(selWin) + ' ' + battleOverlayErrorText(battleWin);
+        const errTxt = overlayTxt + ' ' + body;
         if (
-          isBusyHexError(errTxt) ||
-          /занят|невозмож|ошибка|error|busy|свободн|выбер/i.test(errTxt) ||
+          isBusyHexError(overlayTxt) ||
+          /занят|невозмож|ошибка|error|busy/i.test(errTxt) ||
           consumeBusyAlert()
         ) {
           return 'occupied';
@@ -4197,6 +4199,7 @@
   }
 
   function battleOverlayErrorText(win) {
+    // только modal/overlay — не body (в сетке боя слова «свободн/выбер» обычный UI)
     let t = '';
     try {
       const docs = [];
@@ -4209,7 +4212,6 @@
         const doc = docs[d];
         const modal = doc.getElementById('modal_form') || doc.getElementById('modal') || doc.querySelector('.modal');
         if (modal) t += ' ' + (modal.innerText || modal.textContent || '');
-        t += ' ' + ((doc.body && (doc.body.innerText || doc.body.textContent)) || '').slice(0, 1500);
       }
     } catch (e) {}
     return String(t).replace(/\s+/g, ' ');
@@ -4874,8 +4876,11 @@
       } catch (eI) {}
       for (let d = 0; d < docs.length; d++) {
         const doc = docs[d];
-        const pageTxt = String((doc.body && (doc.body.innerText || doc.body.textContent)) || '').slice(0, 2500);
-        const freeCellDlg = /свободн\w*\s*клетк|выбер\w*\s+свобод/i.test(pageTxt);
+        const modalEl =
+          doc.getElementById('modal_form') || doc.getElementById('modal') || doc.querySelector('.modal');
+        const modalTxt = modalEl ? String(modalEl.innerText || modalEl.textContent || '') : '';
+        // только текст модалки — body сетки содержит «свободн/выбер» и давал ложный busy-loop
+        const freeCellDlg = /свободн\w*\s*клетк|выбер\w*\s+свобод/i.test(modalTxt);
         const btns = [...doc.querySelectorAll('input[type=button],input[type=submit],button,a')];
         for (let i = 0; i < btns.length; i++) {
           const blob = ((btns[i].value || '') + ' ' + (btns[i].textContent || '')).toLowerCase();
@@ -4888,10 +4893,9 @@
             } catch (eC) {}
           }
         }
-        const modal = doc.getElementById('modal_form') || doc.getElementById('modal') || doc.querySelector('.modal');
-        if (modal && modal.style) modal.style.display = 'none';
+        if (modalEl && modalEl.style) modalEl.style.display = 'none';
         if (freeCellDlg) {
-          BOT.state.lastGameAlert = pageTxt.replace(/\s+/g, ' ').slice(0, 120);
+          BOT.state.lastGameAlert = modalTxt.replace(/\s+/g, ' ').slice(0, 120);
           BOT.state.lastBusyAlertAt = Date.now();
         }
       }
@@ -5961,13 +5965,16 @@
       muteBattleAndBook(win, null);
       refreshCfg();
       watchCaptcha();
-      // watchdog: зависшие magbook/helper — сброс (alert больше не должен глушить, но на всякий)
+      // watchdog: зависшие magbook/helper — сброс; cooldown 3с против re-entrancy с dismiss
       if (
         (BOT.state.helperBusy && Date.now() - (BOT.state.helperBusySince || 0) > 25000) ||
-        (BOT.state.lastBusyAlertAt && Date.now() - BOT.state.lastBusyAlertAt < 2000)
+        (BOT.state.lastBusyAlertAt &&
+          Date.now() - BOT.state.lastBusyAlertAt < 2000 &&
+          Date.now() - (BOT.state.lastWatchdogAt || 0) > 3000)
       ) {
         if (BOT.state.helperBusy || consumeBusyAlert()) {
           log('Watchdog: helper/magselect/alert — сброс окон', 'err');
+          BOT.state.lastWatchdogAt = Date.now();
           BOT.state.helperBusy = false;
           BOT.state.helperFailUntil = Date.now() + 8000;
           dismissBattleDialogs(win);
