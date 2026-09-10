@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         5Kings Bot
 // @namespace    https://5kings.ru/
-// @version      1.2.37
+// @version      1.2.38
 // @description  Лес + королевские хаосы 5kings.ru. Только ТЗ. Локальный userscript.
 // @author       freelance
 // @match        http://5kings.ru/*
@@ -71,7 +71,7 @@
     }
   }
 
-  const VERSION = '1.2.37';
+  const VERSION = '1.2.38';
 
   try {
     console.log('%c[5k-bot] executed v' + VERSION + ' @ ' + location.href, 'background:#1a5c1a;color:#fff;padding:4px');
@@ -370,17 +370,16 @@
   const APPS_URL = 'arena_room_1_bmode_36_lvl_-1_smode_0_itype_0.html';
   const ROOM_URL = 'arena_room_1_bmode_36.html';
 
+  // не ловить «Кирка рудокопа» / «Топор лесоруба» — это инструмент, не профессия
   const PROFESSION_HINTS = [
-    /рудокоп/i,
-    /дровосек/i,
-    /лесоруб/i,
-    /травник/i,
-    /только/i,
+    /нужна?\s+професси/i,
+    /професси[яи].{0,24}(рудокоп|дровосек|лесоруб|травник)/i,
+    /только\s+(рудокоп|дровосек|лесоруб|травник)/i,
     /нечего добывать/i,
-    /не можете/i,
+    /не можете добывать/i,
   ];
   const TOOL_NEED_RE =
-    /необходим|инструмент|наденьте|экипир|нужна\s*кирк|нужен\s*топор|корзин\w*\s*грибник|для сбора грибов/i;
+    /необходим|инструмент|наденьте|экипир|нужна\s*кирк|нужен\s*топор|корзин\w*\s*грибник|для сбора грибов|должны иметь в руках|иметь в руках|кирк[уиа]\s*рудокоп|топор\s*лесоруб/i;
   const BASKET_NEED_RE = /корзин\w*\s*грибник|для сбора грибов/i;
 
   function defaultCfg() {
@@ -1791,6 +1790,134 @@
     BOT.state.localNapr = ((Number(n) - 1 + 8) % 8) + 1;
   }
 
+  function naprExactDelta(win, fromX, fromY, toX, toY) {
+    const d = bigForestNaprDeltas(win);
+    const dx = Number(toX) - Number(fromX);
+    const dy = Number(toY) - Number(fromY);
+    for (let n = 1; n <= 8; n++) {
+      if (d.nx[n] === dx && d.ny[n] === dy) return n;
+    }
+    return naprToward(win, fromX, fromY, toX, toY);
+  }
+
+  function isCardinalNapr(n) {
+    n = Number(n);
+    return n === 1 || n === 3 || n === 5 || n === 7;
+  }
+
+  /** Клетка, с которой жила будет прямо по курсу (apeha: сначала лицом, иначе слева/справа). */
+  function pickFaceStand(win, me, vein) {
+    if (!me || !vein) return null;
+    const dlt = bigForestNaprDeltas(win);
+    let best = null;
+    for (let n = 1; n <= 8; n++) {
+      const sx = Number(vein.x) - dlt.nx[n];
+      const sy = Number(vein.y) - dlt.ny[n];
+      if (isBlockedCell(win, sx, sy)) continue;
+      const dist = bigForestChebyshev(me.x, me.y, sx, sy);
+      const here = Number(me.x) === sx && Number(me.y) === sy ? 0 : 1;
+      const cardinal = isCardinalNapr(n) ? 0 : 3;
+      const score = here * 100 + dist * 10 + cardinal;
+      if (!best || score < best.score) {
+        best = { x: sx, y: sy, n: n, dist: dist, score: score };
+      }
+    }
+    return best;
+  }
+
+  async function faceCell(win, tx, ty) {
+    const me0 = discoverMeBig(win) || getMe(win);
+    if (!me0) return false;
+    const exact = naprExactDelta(win, me0.x, me0.y, tx, ty);
+    for (let i = 0; i < 6; i++) {
+      const me = discoverMeBig(win) || getMe(win);
+      const cur = facingNapr(win);
+      const ahead = cellAhead(win, me, cur);
+      if (Number(ahead.x) === Number(tx) && Number(ahead.y) === Number(ty)) {
+        BOT.state.wanderNapr = cur;
+        return true;
+      }
+      if (cur === exact) {
+        await sleep(200);
+        continue;
+      }
+      turnToFace(win, exact);
+      BOT.state.wanderNapr = exact;
+      await sleep(380);
+    }
+    const me2 = discoverMeBig(win) || getMe(win);
+    const ahead2 = cellAhead(win, me2, facingNapr(win));
+    return Number(ahead2.x) === Number(tx) && Number(ahead2.y) === Number(ty);
+  }
+
+  async function approachAndFaceVein(win, me, vein) {
+    if (!me || !vein) return false;
+    const stand = pickFaceStand(win, me, vein);
+    if (!stand) {
+      log('Большой лес: нет клетки лицом к ' + (vein.kind || 'жиле') + ' @' + vein.x + ',' + vein.y, 'err');
+      return false;
+    }
+    if (stand.dist > 0) {
+      log(
+        'Большой лес: к лицу ' +
+          (vein.kind || 'жила') +
+          ' → ' +
+          stand.x +
+          ',' +
+          stand.y +
+          ' (курс ' +
+          stand.n +
+          ')'
+      );
+      await gotoWorldCell(win, stand.x, stand.y, Math.min(28000, 4000 + stand.dist * 600));
+      const meHop = discoverMeBig(win) || getMe(win);
+      if (meHop && (Number(meHop.x) !== Number(stand.x) || Number(meHop.y) !== Number(stand.y))) {
+        await walkToward(
+          win,
+          { x: stand.x, y: stand.y, kind: 'goto', key: stand.x + ',' + stand.y },
+          'лицо жилы',
+          false
+        );
+      }
+    }
+    const me2 = discoverMeBig(win) || getMe(win);
+    const ok = await faceCell(win, vein.x, vein.y);
+    if (!ok) {
+      log('Большой лес: не встал лицом к ' + vein.x + ',' + vein.y + ' (стою ' + (me2 ? me2.x + ',' + me2.y : '?') + ')', 'err');
+    }
+    return ok;
+  }
+
+  async function leaveEmptySearchArea(win, me) {
+    if (!me) return false;
+    let n = BOT.state.wanderNapr || naprFromStartDir(win) || facingNapr(win);
+    function hopLen(dir) {
+      const end = hopFreeEnd(win, me, dir, 8);
+      return { end: end, len: bigForestChebyshev(me.x, me.y, end.x, end.y), n: dir };
+    }
+    let best = hopLen(n);
+    if (best.len < 6) {
+      for (let dir = 1; dir <= 8; dir++) {
+        const h = hopLen(dir);
+        if (h.len > best.len) best = h;
+      }
+    }
+    if (best.len < 1) {
+      log('Большой лес: пустой поиск — некуда уйти', 'err');
+      BOT.state.lastSearchEmpty = false;
+      return false;
+    }
+    log('Большой лес: пустой поиск — ухожу на ' + best.len + ' кл. курс ' + best.n);
+    BOT.state.wanderNapr = best.n;
+    turnToFace(win, best.n);
+    await sleep(200);
+    await gotoWorldCell(win, best.end.x, best.end.y, Math.min(28000, 4000 + best.len * 500));
+    BOT.state.lastSearchEmpty = false;
+    BOT.state.bigForestHint = null;
+    BOT.state.stepsSinceSearch = 99;
+    return true;
+  }
+
   function naprToward(win, fromX, fromY, toX, toY) {
     const d = bigForestNaprDeltas(win);
     const wantDx = Math.sign(Number(toX) - Number(fromX));
@@ -1816,8 +1943,8 @@
   }
 
   function turnToFace(win, want) {
-    // поворачиваем сразу на нужный угол (не по одному тику — иначе «вертится на месте»)
-    let cur = currentNapr(win);
+    // курс из игры, не localNapr: после GotoKletka персонаж смотрит куда шёл, local врёт
+    let cur = facingNapr(win);
     want = ((Number(want) - 1 + 8) % 8) + 1;
     if (cur === want) return 0;
     let left = 0;
@@ -1903,7 +2030,7 @@
     let wx = Number(me.x);
     let wy = Number(me.y);
     let lastGood = { x: wx, y: wy };
-    const cap = maxN || 6;
+    const cap = maxN || 8;
     for (let i = 0; i < cap; i++) {
       wx += d.nx[n];
       wy += d.ny[n];
@@ -1937,12 +2064,12 @@
   function bestEscapeNapr(win, me, cur) {
     if (!me) return cur;
     let best = cur;
-    let bestLen = hopFreeLen(win, me, cur, 6);
+    let bestLen = hopFreeLen(win, me, cur, 8);
     const b = BOT.state.wanderBias || 1;
     const offsets = [b, -b, 2 * b, -2 * b, 3 * b, -3 * b, 4];
     for (let i = 0; i < offsets.length; i++) {
       const n = ((cur - 1 + offsets[i] + 8) % 8) + 1;
-      const len = hopFreeLen(win, me, n, 6);
+      const len = hopFreeLen(win, me, n, 8);
       if (len > bestLen) {
         bestLen = len;
         best = n;
@@ -2532,7 +2659,45 @@
     log('Большой лес: поиск…', 'ok');
     if (typeof win.StartSearch === 'function') win.StartSearch();
     else bigForestSend(win, 'actNewMaps-StartSearch=1');
-    await sleep(1200);
+    const t0 = Date.now();
+    let sawBusy = false;
+    let foundHint = null;
+    let empty = false;
+    while (Date.now() - t0 < 14000) {
+      const we = Number(win.global_data && win.global_data.wait_event) || 0;
+      if (we === 2) sawBusy = true;
+      let modalTxt = '';
+      try {
+        const modal = win.document.getElementById('modal_form');
+        const vis = modal && modal.style && modal.style.display === 'block';
+        if (vis) modalTxt = String(modal.innerText || modal.innerHTML || '');
+      } catch (eM) {}
+      const parsed = parseBigForestHint(modalTxt);
+      if (parsed) {
+        foundHint = parsed;
+        BOT.state.bigForestHint = parsed;
+        BOT.state.lastSearchEmpty = false;
+        break;
+      }
+      if (/ничего не найдено/i.test(modalTxt)) {
+        empty = true;
+        break;
+      }
+      if (sawBusy && we === 0 && Date.now() - t0 > 900) break;
+      if (!sawBusy && Date.now() - t0 > 3500 && we === 0) break;
+      await sleep(280);
+    }
+    const txt = bigForestReadText(win);
+    const parsed2 = foundHint || parseBigForestHint(txt);
+    if (parsed2) {
+      BOT.state.bigForestHint = parsed2;
+      BOT.state.lastSearchEmpty = false;
+      log('Большой лес: поиск → «' + String(parsed2.txt || '').replace(/\s+/g, ' ').slice(0, 80) + '»');
+    } else {
+      BOT.state.lastSearchEmpty = true;
+      BOT.state.bigForestHint = null;
+      log('Большой лес: поиск — ничего не найдено');
+    }
   }
 
   function bagRowBlob(row) {
@@ -2690,6 +2855,82 @@
     return false;
   }
 
+  function findWearTarget(root, wantKind) {
+    if (!root) return null;
+    const html = String((root.innerHTML || '') + ' ' + (root.outerHTML || ''));
+    const wearUrl = /(?:bag_type_17[^"'?\s]*\?|)\s*actUser-Wear=(\d+)/i.exec(html);
+    if (wearUrl) return { href: 'bag_type_17.html?actUser-Wear=' + wearUrl[1] };
+    const btn = findRowAction(root, /одеть|надеть|wear/i);
+    if (btn) return { el: btn };
+    const inputs = root.querySelectorAll ? [...root.querySelectorAll('input,button,a')] : [];
+    for (let i = 0; i < inputs.length; i++) {
+      const el = inputs[i];
+      const blob = ((el.value || '') + ' ' + (el.name || '') + ' ' + (el.getAttribute('onclick') || '')).toLowerCase();
+      if (/одеть|надеть|wear/i.test(blob)) return { el: el };
+      const v = String(el.value || '');
+      if (/actUser-Wear/i.test(blob) && /^\d{2,}$/.test(v)) {
+        return { href: 'bag_type_17.html?actUser-Wear=' + v };
+      }
+    }
+    return null;
+  }
+
+  function findBagToolWear(doc, wantKind) {
+    if (!doc) return null;
+    const nodes = [...doc.querySelectorAll('tr,td,div,li')];
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (node.querySelector && node.querySelector('tr') && node.tagName === 'TR') continue;
+      const txt = bagRowBlob(node);
+      if (!bagRowIsTool(txt, wantKind)) continue;
+      const wear = findWearTarget(node, wantKind);
+      if (wear) return { node: node, txt: txt, wear: wear, equipped: bagLooksEquipped(txt) };
+    }
+    const imgs = [...doc.querySelectorAll('img,[title],[alt]')];
+    for (let i = 0; i < imgs.length; i++) {
+      const el = imgs[i];
+      const title = normalizeItemName(el.title || el.alt || '');
+      if (!bagRowIsTool(title, wantKind) && !bagRowIsTool(title + ' ' + bagRowBlob(el.parentNode), wantKind)) continue;
+      let node = el;
+      for (let up = 0; up < 8 && node; up++) {
+        const wear = findWearTarget(node, wantKind);
+        if (wear) {
+          return {
+            node: node,
+            txt: title || bagRowBlob(node),
+            wear: wear,
+            equipped: bagLooksEquipped(bagRowBlob(node)),
+          };
+        }
+        node = node.parentNode;
+      }
+    }
+    return null;
+  }
+
+  function readEquippedHandTitle() {
+    try {
+      const tw = getTopWin();
+      const names = ['pers', 'persrefr', 'd_pers', 'user'];
+      for (let i = 0; i < names.length; i++) {
+        try {
+          const fr = tw.frames[names[i]];
+          const img = fr && fr.document && fr.document.getElementById('IMG_rarm');
+          if (img && img.title) return String(img.title);
+        } catch (eF) {}
+      }
+      const img = tw.document && tw.document.getElementById('IMG_rarm');
+      if (img && img.title) return String(img.title);
+    } catch (e) {}
+    return '';
+  }
+
+  function handHasTool(wantKind) {
+    const t = normalizeItemName(readEquippedHandTitle());
+    if (!t) return false;
+    return bagRowIsTool(t, wantKind);
+  }
+
   async function equipCraftTool(hintTxt, kind, force) {
     if (!BOT.cfg.forest.equipTool) return false;
     const want = resolveToolWant(hintTxt, kind);
@@ -2698,9 +2939,13 @@
     const wantPick = wantKind === 'pick';
     const wantAxe = wantKind === 'axe';
     const wantBasket = wantKind === 'basket';
+    if (handHasTool(wantKind)) {
+      BOT.state.equippedToolKind = wantKind;
+      return true;
+    }
     if (BOT.state.equippedToolKind && BOT.state.equippedToolKind !== wantKind) force = true;
     if (!force && BOT.state.equippedToolKind === wantKind) return true;
-    if (!force && Date.now() - (BOT.state.lastEquipTryAt || 0) < 20000 && BOT.state.lastEquipTryKind === wantKind) {
+    if (!force && Date.now() - (BOT.state.lastEquipTryAt || 0) < 8000 && BOT.state.lastEquipTryKind === wantKind) {
       return BOT.state.equippedToolKind === wantKind;
     }
     BOT.state.lastEquipTryAt = Date.now();
@@ -2708,11 +2953,10 @@
     const label = want.name;
     log('Инвентарь: ' + label + '…');
 
-    const paths = ['bag_type_17_mode_0.html', 'bag.chtml', 'bag_type_17.html'];
+    const paths = ['bag_type_17.html', 'bag_type_17_mode_0.html', 'bag.chtml'];
     for (let pi = 0; pi < paths.length; pi++) {
       const ok = await withBagPopup(paths[pi], async function (bagWin) {
         const rows = [...bagWin.document.querySelectorAll('tr')];
-        // снять чужой инструмент
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
           if (row.querySelector && row.querySelector('tr')) continue;
@@ -2723,7 +2967,7 @@
               ? true
               : wantBasket && (/кирк|топор|kirka|topor/i.test(txt) && !/корзин/i.test(txt))
                 ? true
-                : wantPick && /топор|topor|axe/i.test(txt) && !/кирк|kirka/i.test(txt)
+                : wantPick && /топор|topor|axe/i.test(txt) && !/кирк|kirka|рудокоп/i.test(txt)
                   ? true
                   : wantAxe && /кирк|kirka/i.test(txt) && !/топор|topor/i.test(txt);
           if (!wrong) continue;
@@ -2735,25 +2979,29 @@
           }
         }
 
-        const rows2 = [...bagWin.document.querySelectorAll('tr')];
-        for (let i = 0; i < rows2.length; i++) {
-          const row = rows2[i];
-          if (row.querySelector && row.querySelector('tr')) continue;
-          const txt = bagRowBlob(row);
-          if (!bagRowIsTool(txt, wantKind)) continue;
-          if (bagLooksEquipped(txt) && !findRowAction(row, /одеть|надеть|wear/i)) {
-            BOT.state.equippedToolKind = wantKind;
-            log('Уже надет: ' + label, 'ok');
-            return true;
+        const found = findBagToolWear(bagWin.document, wantKind);
+        if (found && found.equipped && !found.wear) {
+          BOT.state.equippedToolKind = wantKind;
+          log('Уже надет: ' + label, 'ok');
+          return true;
+        }
+        if (found && found.wear) {
+          if (found.wear.href) {
+            try {
+              const rel = found.wear.href;
+              bagWin.location.href = rel.indexOf('/') === 0 ? rel.slice(1) : rel;
+            } catch (eH) {
+              try {
+                bagWin.location.href = found.wear.href;
+              } catch (eH2) {}
+            }
+          } else if (found.wear.el) {
+            found.wear.el.click();
           }
-          const btn = findRowAction(row, /одеть|надеть|wear/i);
-          if (btn) {
-            btn.click();
-            BOT.state.equippedToolKind = wantKind;
-            log('Экипировал: ' + txt.replace(/\s+/g, ' ').slice(0, 70), 'ok');
-            await sleep(900);
-            return true;
-          }
+          BOT.state.equippedToolKind = wantKind;
+          log('Экипировал: ' + String(found.txt || label).replace(/\s+/g, ' ').slice(0, 70), 'ok');
+          await sleep(900);
+          return true;
         }
         return false;
       });
@@ -2789,11 +3037,10 @@
       return false;
     }
     const hintTxt = (BOT.state.bigForestHint && BOT.state.bigForestHint.txt) || reason || '';
-    // приоритет: явный kind → реальная клетка перед нами → подсказка (не стухшая)
     const toolKind =
       kind || kindAtCell(win, me && me.x, me && me.y) || craftKindFromHint(BOT.state.bigForestHint);
     try {
-      await equipCraftTool(hintTxt, toolKind);
+      await equipCraftTool(hintTxt, toolKind, true);
     } catch (eEq) {}
     log('Большой лес: добыча (' + (reason || 'event') + ') @' + key + (toolKind ? ' ' + toolKind : ''));
     BOT.state.forestTimers.lastCraftAt = Date.now();
@@ -2801,9 +3048,10 @@
     else bigForestSend(win, 'actNewMaps-StartDobycha=1');
     await sleep(1500);
     const txt = bigForestReadText(win);
-    if (TOOL_NEED_RE.test(txt) && !/рудокоп|дровосек|лесоруб|травник|нечего добывать/i.test(txt)) {
+    if (TOOL_NEED_RE.test(txt) && !/нечего добывать/i.test(txt)) {
       log('Большой лес: нужен инструмент — не бан, повтор', 'err');
       BOT.state.equippedToolKind = null;
+      BOT.state.dobychaFails = Math.max(0, (BOT.state.dobychaFails || 1) - 1);
       try {
         await equipCraftTool(txt, BASKET_NEED_RE.test(txt) ? 'mushroom' : toolKind || 'copper', true);
       } catch (eEq2) {}
@@ -2812,9 +3060,10 @@
       await sleep(1200);
       return true;
     }
-    if (PROFESSION_HINTS.some(function (re) {
+    const professionHit = PROFESSION_HINTS.some(function (re) {
       return re.test(txt);
-    })) {
+    });
+    if (professionHit && !TOOL_NEED_RE.test(txt)) {
       BOT.state.bannedAbs.add(key);
       log('Большой лес: бан ' + key + ' — ' + txt.slice(0, 80), 'err');
       BOT.state.bigForestHint = null;
@@ -2926,28 +3175,31 @@
 
     if (hint.front) {
       try {
-        await equipCraftTool(hint.txt || kind, kind, false);
+        await equipCraftTool(hint.txt || kind, kind, true);
       } catch (eE) {}
       await bigForestTryDobycha(win, 'перед вами', kind);
       return true;
     }
 
-    // слева / справа / сзади — клик по карте (не step-поворот), инструмент, поиск
+    // слева / справа / сзади — поворот на месте (givik ChangeNapr), не уход боком
     if (hint.dir === 'left' || hint.dir === 'right' || hint.dir === 'back') {
-      log('Большой лес: «' + hint.dir + '» → клик/лицо (' + kind + ')');
+      const faceN = naprFromHintDir(win, hint.dir);
+      log('Большой лес: «' + hint.dir + '» → поворот на месте курс ' + faceN + ' (' + kind + ')');
       try {
-        await equipCraftTool(hint.txt || kind, kind, false);
+        await equipCraftTool(hint.txt || kind, kind, true);
       } catch (eEq) {}
-      await faceResourceByHint(win, me, hint, kind);
+      turnToFace(win, faceN);
+      BOT.state.wanderNapr = faceN;
+      await sleep(450);
       await bigForestDoSearch(win);
       return true;
     }
 
-    // в радиусе — к ближайшей жиле/дереву этого типа; деревья часто только по поиску
+    // в радиусе — встать лицом к ближайшей жиле этого типа, потом поиск
     if (hint.dir === 'radius' || hint.dir === 'near' || hint.dir === 'frontish') {
       log('Большой лес: «в радиусе» ' + kind);
       try {
-        await equipCraftTool(hint.txt || kind, kind, false);
+        await equipCraftTool(hint.txt || kind, kind, true);
       } catch (eEq2) {}
       const radius = Math.max(1, Number(BOT.cfg.forest.searchRadius) || 5);
       const veins = listBigForestItems(win, 'craft')
@@ -2964,26 +3216,17 @@
         });
       if (veins.length) {
         const v = veins[0];
-        const d = bigForestChebyshev(me.x, me.y, v.x, v.y);
-        if (d <= 1) {
-          const faceN = naprToward(win, me.x, me.y, v.x, v.y);
-          // клик на клетку жилы / стойку рядом
-          await clickMapCell(win, v.x, v.y);
-          turnToFace(win, faceN);
-          BOT.state.wanderNapr = faceN;
-          await sleep(450);
-          await bigForestDoSearch(win);
+        const faced = await approachAndFaceVein(win, me, v);
+        if (!faced) {
+          markVeinScanned(v.key);
+          log('Большой лес: не встал лицом к ' + v.key + ' — ухожу');
+          BOT.state.lastSearchEmpty = true;
           return true;
         }
-        await walkToward(win, v, kind + ' радиус', true);
+        await bigForestDoSearch(win);
         return true;
       }
-      // на карте не видно (часто деревья) — клик вперёд и поиск
-      const stepN = BOT.state.wanderNapr || currentNapr(win);
-      const end = hopFreeEnd(win, me, stepN, 3);
-      if (Number(end.x) !== Number(me.x) || Number(end.y) !== Number(me.y)) {
-        await clickMapCell(win, end.x, end.y);
-      }
+      // на карте не видно (часто деревья) — поиск с места, без шага на 2 клетки
       await bigForestDoSearch(win);
       return true;
     }
@@ -3143,7 +3386,7 @@
     } else if (Date.now() - BOT.state.idleWatch.since > 12000) {
       if (
         Date.now() < (BOT.state.craftStickUntil || 0) ||
-        (hintFresh(BOT.state.bigForestHint, 20000) && craftKindFromHint(BOT.state.bigForestHint))
+        (hintFresh(BOT.state.bigForestHint, 20000) && BOT.state.bigForestHint && BOT.state.bigForestHint.front)
       ) {
         BOT.state.idleWatch = { key: idleKey, since: Date.now() };
       } else {
@@ -3295,7 +3538,7 @@
           }
         } else if (dStick <= 2) {
           log('Большой лес: возвращаюсь к жиле @' + t.x + ',' + t.y);
-          await walkToward(win, t, t.kind || 'жила', true);
+          await approachAndFaceVein(win, me, t);
           return;
         } else {
           BOT.state.craftStickTarget = null;
@@ -3334,107 +3577,10 @@
       }
     }
 
-    // 3) руда/золото в радиусе: сканируем КАЖДУЮ жилу по очереди (apeha), не одну и ту же
-    if (needCraft) {
-      let scanKind = craftKind;
-      if (hintFresh(hint) && !scanKind) scanKind = craftKindFromHint(hint);
-      // НЕ подменять «дерево» старой медью — иначе на сосну лезет кирка
-      if (!scanKind && BOT.state.veinScanKind) scanKind = BOT.state.veinScanKind;
-      if (hintFresh(hint) && craftKind) BOT.state.veinScanKind = craftKind;
-
-      const veinsAll = listBigForestItems(win, 'craft');
-      let veins = veinsAll.filter(function (it) {
-        if (veinWasScanned(it.key)) return false;
-        if (!scanKind) return true;
-        // «дуб в радиусе» — только деревья, не медь
-        if (scanKind === 'tree') return it.kind === 'tree';
-        if (it.kind === scanKind) return true;
-        if (scanKind === 'gold') return it.kind === 'gold' || it.kind === 'copper' || it.kind === 'iron';
-        return false;
-      });
-      const radius = Math.max(1, Number(BOT.cfg.forest.searchRadius) || 5);
-      if (hintFresh(hint) && !hint.front) {
-        veins = veins.filter(function (it) {
-          return bigForestChebyshev(me.x, me.y, it.x, it.y) <= radius + 1;
-        });
-      }
-      veins.sort(function (a, b) {
-        return bigForestChebyshev(me.x, me.y, a.x, a.y) - bigForestChebyshev(me.x, me.y, b.x, b.y);
-      });
-
-      if (needCraft && isWantedCraftAhead(aheadKind) && !veinWasScanned(ahead.x + ',' + ahead.y)) {
-        const vk = ahead.x + ',' + ahead.y;
-        log('Большой лес: ' + aheadKind + ' впереди @' + vk + ' — разово поиск');
-        try {
-          await equipCraftTool(aheadKind, aheadKind, false);
-        } catch (eAh) {}
-        await bigForestDoSearch(win);
-        const h2 = parseBigForestHint(bigForestReadText(win)) || BOT.state.bigForestHint;
-        if (h2 && h2.front) {
-          BOT.state.bigForestHint = h2;
-          return;
-        }
-        markVeinScanned(vk);
-        log('Большой лес: жила ' + vk + ' без «прямо перед вами» — следующая');
-        return;
-      }
-
-      if (veins.length) {
-        const vein = veins[0];
-        const d1 = bigForestChebyshev(me.x, me.y, vein.x, vein.y);
-        if (d1 <= 1) {
-          // встать так, чтобы жила была ПРЯМО ПЕРЕД вами (не боком), потом поиск
-          const dlt = bigForestNaprDeltas(win);
-          let faceN = null;
-          let stand = null;
-          for (let n = 1; n <= 8; n++) {
-            const sx = Number(vein.x) - dlt.nx[n];
-            const sy = Number(vein.y) - dlt.ny[n];
-            if (isBlockedCell(win, sx, sy)) continue;
-            const distStand = bigForestChebyshev(me.x, me.y, sx, sy);
-            if (distStand > 2) continue;
-            if (!stand || distStand < stand.dist) {
-              stand = { x: sx, y: sy, n: n, dist: distStand };
-            }
-            if (Number(me.x) === sx && Number(me.y) === sy) {
-              faceN = n;
-              stand = { x: sx, y: sy, n: n, dist: 0 };
-              break;
-            }
-          }
-          if (stand && stand.dist > 0) {
-            log('Большой лес: к лицу жилы ' + vein.kind + ' → ' + stand.x + ',' + stand.y);
-            await gotoWorldCell(win, stand.x, stand.y);
-            faceN = stand.n;
-          }
-          if (faceN == null) faceN = naprToward(win, me.x, me.y, vein.x, vein.y);
-          const turns = turnToFace(win, faceN);
-          await sleep(turns ? 480 : 280);
-          const me2 = discoverMeBig(win) || getMe(win);
-          const ahead2 = cellAhead(win, me2, currentNapr(win));
-          if (!(Number(ahead2.x) === Number(vein.x) && Number(ahead2.y) === Number(vein.y))) {
-            const face2 = naprToward(win, me2.x, me2.y, vein.x, vein.y);
-            turnToFace(win, face2);
-            await sleep(400);
-          }
-          // кирка/топор до поиска у жилы — без force, если уже нужный
-          try {
-            await equipCraftTool(vein.kind || scanKind || 'copper', vein.kind || scanKind || 'copper', false);
-          } catch (eEqV) {}
-          log('Большой лес: поиск у жилы ' + vein.kind + ' @' + vein.key + ' лицом');
-          await bigForestDoSearch(win);
-          const h2 = parseBigForestHint(bigForestReadText(win)) || BOT.state.bigForestHint;
-          if (!(h2 && h2.front)) {
-            markVeinScanned(vein.key);
-            log('Большой лес: ' + vein.key + ' пустая, иду к следующей жиле');
-          }
-          return;
-        }
-        const walked = await walkToward(win, vein, vein.kind || 'жила', true);
-        if (walked) return;
-        markVeinScanned(vein.key);
-      }
-      // все жилы в радиусе уже помечены — блуждаем; TTL 90с сам снимет метки
+    // 3) пустой поиск (нет «в радиусе 5») — уходим на 6–8 клеток, не сканируем соседние текстуры
+    if (needCraft && BOT.state.lastSearchEmpty) {
+      await leaveEmptySearchArea(win, me);
+      return;
     }
 
     // 5) Поиск каждые N шагов
@@ -3451,19 +3597,19 @@
     }
     if (hold && Date.now() > (BOT.state.holdDetourUntil || 0)) {
       const preferred = naprFromStartDir(win);
-      if (preferred >= 1 && preferred <= 8 && hopFreeLen(win, me, preferred, 6) >= 4) {
+      if (preferred >= 1 && preferred <= 8 && hopFreeLen(win, me, preferred, 8) >= 6) {
         BOT.state.wanderNapr = preferred;
       }
     }
     let wn = BOT.state.wanderNapr;
-    let lastGood = hopFreeEnd(win, me, wn, 6);
+    let lastGood = hopFreeEnd(win, me, wn, 8);
     if (lastGood.x === Number(me.x) && lastGood.y === Number(me.y)) {
       const alt = bestEscapeNapr(win, me, wn);
       log('Большой лес: упёрся, скольжение курс ' + wn + ' → ' + alt);
       BOT.state.wanderNapr = alt;
       markHoldDetour();
       wn = alt;
-      lastGood = hopFreeEnd(win, me, wn, 6);
+      lastGood = hopFreeEnd(win, me, wn, 8);
     }
     if (lastGood.x !== Number(me.x) || lastGood.y !== Number(me.y)) {
       const after = await gotoWorldCell(win, lastGood.x, lastGood.y);

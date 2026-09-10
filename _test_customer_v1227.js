@@ -25,7 +25,7 @@ ok('1a bag skips armor via bagRowIsTool', /bagRowIsTool/.test(src) && /шлем|
 ok('1b no "click any Одеть"', !/const any = win\.document\.querySelector\(/.test(src));
 ok('1c basket only if not already basket', /equippedToolKind !== 'basket'/.test(src));
 ok('1d pick via TOOL_MAP copper', /TOOL_MAP[\s\S]*?copper:[\s\S]*?kind: 'pick'/.test(src));
-ok('1e bag throttle 20s', /lastEquipTryAt \|\| 0\) < 20000/.test(src));
+ok('1e bag throttle 8s', /lastEquipTryAt \|\| 0\) < 8000/.test(src));
 ok('1f mushroom does not open bag if basket on', /equippedToolKind !== 'basket'/.test(src) && /корзина грибника/.test(src));
 
 console.log('--- 2–3. не крутиться у скал ---');
@@ -41,7 +41,7 @@ ok('4c longHop for goto/radar/mush', /dest\.fromRadar/.test(src) && /cellGotoId\
 
 console.log('--- 5. не разворачиваться спонтанно ---');
 ok('5a random reverse only if !hold', /if \(!hold && Math\.random\(\) < 0\.03\)/.test(src));
-ok('5b restore course needs 4 free cells', /hopFreeLen\(win, me, preferred, 6\) >= 4/.test(src));
+ok('5b restore course needs 6 free cells', /hopFreeLen\(win, me, preferred, 8\) >= 6/.test(src));
 
 console.log('--- 6. категории грибов 1/2/3 ---');
 ok('6a mushroomCat1..3 cfg', /mushroomCat1: true/.test(src) && /mushroomCat2: true/.test(src) && /mushroomCat3: true/.test(src));
@@ -60,7 +60,7 @@ ok('B2 clone again next turn', /wasOurTurn/.test(src) && /можно клони�
 ok('B3 clone on field does not lock fight', !/if \(battleHasOwnHelper/.test(src));
 ok('B4 no 25s lock after clone', !/helperFailUntil = Date\.now\(\) \+ 25000/.test(src));
 
-ok('V version 1.2.35', /@version\s+1\.2\.35/.test(src) && /VERSION = '1\.2\.35'/.test(src));
+ok('V version 1.2.38', /@version\s+1\.2\.38/.test(src) && /VERSION = '1\.2\.38'/.test(src));
 
 console.log('--- 8. радар / бой-таймер / точка ---');
 ok('8a radar default on', /useRadar: true/.test(src) && !/cfg\.forest\.useRadar = false/.test(src));
@@ -77,8 +77,8 @@ console.log('--- 9. клон / жила / тактика ---');
 ok('9a occupied checks UNBS', /Number\(u\.x\) === Number\(x\)/.test(src) && /banSummonHex/.test(src));
 ok('9b force close magbook', /closeMagbookWin\(handle, true\)/.test(src) && /dismissBattleDialogs/.test(src));
 ok('9c busy hex error', /isBusyHexError/.test(src) && /занят/.test(src));
-ok('9d tree scan only trees', /scanKind === 'tree'\) return it\.kind === 'tree'/.test(src));
-ok('9e face vein before search', /к лицу жилы/.test(src) && /поиск у жилы/.test(src));
+ok('9d radius tree only trees', /kind === 'tree'\) return it\.kind === 'tree'/.test(src));
+ok('9e face vein before search', /function approachAndFaceVein/.test(src) && /к лицу /.test(src));
 ok('9f strip basket for pick', /Снял:/.test(src) && /equippedToolKind !== wantKind\) force = true/.test(src));
 ok('9g battle tactic cfg', /tactic: 'standard'/.test(src) && /battle\.tactic/.test(src) && /агрессивный \(2 удара\)/.test(src));
 ok('9h tactic apply', /tactic === 'defense'/.test(src) && /tactic === 'aggressive'/.test(src) && /1 удар \+ 2 блока/.test(src));
