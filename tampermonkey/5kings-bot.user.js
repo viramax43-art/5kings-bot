@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         5Kings Bot
 // @namespace    https://5kings.ru/
-// @version      1.2.42
+// @version      1.2.43
 // @description  Лес + королевские хаосы 5kings.ru. Только ТЗ. Локальный userscript.
 // @author       freelance
 // @match        http://5kings.ru/*
@@ -71,7 +71,7 @@
     }
   }
 
-  const VERSION = '1.2.42';
+  const VERSION = '1.2.43';
 
   try {
     console.log('%c[5k-bot] executed v' + VERSION + ' @ ' + location.href, 'background:#1a5c1a;color:#fff;padding:4px');
@@ -1248,8 +1248,65 @@
   const FRONT_EVENT_RE = /прямо\s+перед\s+вами|перед\s+вами/i;
   const STRICT_FRONT_RE = /прямо\s+перед\s+вами/i;
 
+  /** Последнее craft-сообщение из DOM чата (не весь innerText истории). */
+  function readLastCraftFromChatDom() {
+    let last = '';
+    function scan(doc) {
+      if (!doc || !doc.querySelectorAll) return;
+      const nodes = doc.querySelectorAll('tr, li, p, div, font, span, td');
+      const n = Math.min(nodes.length, 400);
+      // с конца — свежие сообщения обычно ниже
+      for (let i = n - 1; i >= 0; i--) {
+        const el = nodes[i];
+        if (el.querySelector && el.querySelector('tr, li, p, div')) continue;
+        let t = '';
+        try {
+          t = String(el.innerText || el.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        } catch (eT) {
+          continue;
+        }
+        if (t.length < 6 || t.length > 280) continue;
+        if (!(CRAFT_EVENT_RE.test(t) || FRONT_EVENT_RE.test(t))) continue;
+        last = t;
+        return;
+      }
+    }
+    try {
+      const tw = getTopWin();
+      const names = ['d_chat', 'chat', 'd_chatuser', 'chatuser', 'd_chatact', 'chatact'];
+      for (let i = 0; i < names.length; i++) {
+        try {
+          const fr = tw.frames[names[i]];
+          if (fr && fr.document) {
+            scan(fr.document);
+            if (last) return last;
+          }
+        } catch (eN) {}
+      }
+      const ifr = tw.document && tw.document.querySelectorAll('iframe');
+      if (ifr) {
+        for (let i = 0; i < ifr.length; i++) {
+          const src = String((ifr[i].src || '') + ' ' + (ifr[i].name || '') + ' ' + (ifr[i].id || ''));
+          if (!/chat/i.test(src)) continue;
+          try {
+            scan(ifr[i].contentDocument);
+            if (last) return last;
+          } catch (eI) {}
+        }
+      }
+    } catch (e) {}
+    return last;
+  }
+
   /** Берём последнее отдельное craft-сообщение — не смешиваем «слева» и «справа» в одном blob. */
   function extractLastCraftMessage(text) {
+    // приоритет: последний DOM-узел чата
+    try {
+      const fromDom = readLastCraftFromChatDom();
+      if (fromDom) return fromDom;
+    } catch (eD) {}
     const raw = String(text || '').replace(/\u00a0/g, ' ');
     if (!raw.trim()) return '';
     // строки чата / блоки без точки между сообщениями
@@ -2793,6 +2850,9 @@
     BOT.state.stepsSinceSearch = 0;
     BOT.state.forestTimers.lastSearchAt = Date.now();
     log('Большой лес: поиск…', 'ok');
+    // сброс fp — результат поиска принимаем даже если текст совпал с прошлой подсказкой
+    BOT.state.lastHintFp = '';
+    BOT.state.bigForestHint = null;
     if (typeof win.StartSearch === 'function') win.StartSearch();
     else bigForestSend(win, 'actNewMaps-StartSearch=1');
     const t0 = Date.now();
@@ -2808,7 +2868,8 @@
         const vis = modal && modal.style && modal.style.display === 'block';
         if (vis) modalTxt = String(modal.innerText || modal.innerHTML || '');
       } catch (eM) {}
-      const parsed = acceptForestHint(win, modalTxt, true);
+      // без forceNew: после сброса fp первое новое сообщение принимается один раз
+      const parsed = modalTxt ? acceptForestHint(win, modalTxt, false) : null;
       if (parsed) {
         foundHint = parsed;
         BOT.state.lastSearchEmpty = false;
@@ -2822,8 +2883,9 @@
       if (!sawBusy && Date.now() - t0 > 3500 && we === 0) break;
       await sleep(280);
     }
+    // история чата — только false; модалка поиска уже в foundHint
     const txt = bigForestReadText(win);
-    const parsed2 = foundHint || acceptForestHint(win, txt, true);
+    const parsed2 = foundHint || (txt ? acceptForestHint(win, txt, false) : null);
     if (parsed2) {
       BOT.state.lastSearchEmpty = false;
       log('Большой лес: поиск → «' + String(parsed2.txt || '').replace(/\s+/g, ' ').slice(0, 80) + '»');
@@ -3544,7 +3606,8 @@
       const modal = win.document && win.document.getElementById('modal_form');
       if (modal && modal.style && modal.style.display === 'block') {
         const mtxt = (modal.innerText || '') + '';
-        const hint = acceptForestHint(win, mtxt, true);
+        // тик перечитывает ту же модалку — без forceNew (новый текст приходит через OpenModal)
+        const hint = acceptForestHint(win, mtxt, false);
         if (hint) {
           /* already stored */
         }
