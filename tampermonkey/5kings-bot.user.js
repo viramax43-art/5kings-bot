@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         5Kings Bot
 // @namespace    https://5kings.ru/
-// @version      1.2.38
+// @version      1.2.39
 // @description  Лес + королевские хаосы 5kings.ru. Только ТЗ. Локальный userscript.
 // @author       freelance
 // @match        http://5kings.ru/*
@@ -71,7 +71,7 @@
     }
   }
 
-  const VERSION = '1.2.38';
+  const VERSION = '1.2.39';
 
   try {
     console.log('%c[5k-bot] executed v' + VERSION + ' @ ' + location.href, 'background:#1a5c1a;color:#fff;padding:4px');
@@ -1826,27 +1826,23 @@
   }
 
   async function faceCell(win, tx, ty) {
-    const me0 = discoverMeBig(win) || getMe(win);
-    if (!me0) return false;
-    const exact = naprExactDelta(win, me0.x, me0.y, tx, ty);
-    for (let i = 0; i < 6; i++) {
-      const me = discoverMeBig(win) || getMe(win);
-      const cur = facingNapr(win);
-      const ahead = cellAhead(win, me, cur);
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const meCur = discoverMeBig(win) || getMe(win);
+      if (!meCur) break;
+      const ahead = cellAhead(win, meCur, currentNapr(win));
       if (Number(ahead.x) === Number(tx) && Number(ahead.y) === Number(ty)) {
-        BOT.state.wanderNapr = cur;
+        BOT.state.wanderNapr = currentNapr(win);
         return true;
       }
-      if (cur === exact) {
-        await sleep(200);
-        continue;
-      }
-      turnToFace(win, exact);
-      BOT.state.wanderNapr = exact;
-      await sleep(380);
+      const faceNeeded = naprToward(win, meCur.x, meCur.y, tx, ty);
+      const t = turnToFace(win, faceNeeded);
+      BOT.state.wanderNapr = faceNeeded;
+      await sleep(t ? 350 : 150);
+      if (!t) break;
     }
     const me2 = discoverMeBig(win) || getMe(win);
-    const ahead2 = cellAhead(win, me2, facingNapr(win));
+    if (!me2) return false;
+    const ahead2 = cellAhead(win, me2, currentNapr(win));
     return Number(ahead2.x) === Number(tx) && Number(ahead2.y) === Number(ty);
   }
 
@@ -2696,7 +2692,7 @@
     } else {
       BOT.state.lastSearchEmpty = true;
       BOT.state.bigForestHint = null;
-      log('Большой лес: поиск — ничего не найдено');
+      log('Большой лес: поиск пустой');
     }
   }
 
@@ -3039,9 +3035,15 @@
     const hintTxt = (BOT.state.bigForestHint && BOT.state.bigForestHint.txt) || reason || '';
     const toolKind =
       kind || kindAtCell(win, me && me.x, me && me.y) || craftKindFromHint(BOT.state.bigForestHint);
+    let equipped = !BOT.cfg.forest.equipTool;
     try {
-      await equipCraftTool(hintTxt, toolKind, true);
+      if (BOT.cfg.forest.equipTool) equipped = await equipCraftTool(hintTxt, toolKind, true);
     } catch (eEq) {}
+    if (!equipped) {
+      log('Большой лес: инструмент не надет — пропускаю добычу @' + key, 'err');
+      BOT.state.lastEquipFailAt = Date.now();
+      return false;
+    }
     log('Большой лес: добыча (' + (reason || 'event') + ') @' + key + (toolKind ? ' ' + toolKind : ''));
     BOT.state.forestTimers.lastCraftAt = Date.now();
     if (typeof win.StartDobycha === 'function') win.StartDobycha();
@@ -3174,6 +3176,10 @@
     if (!kind) return false;
 
     if (hint.front) {
+      if (BOT.state.lastEquipFailAt && Date.now() - BOT.state.lastEquipFailAt < 30000) {
+        log('Большой лес: нет инструмента, пауза 30с — иду блуждать');
+        return false;
+      }
       try {
         await equipCraftTool(hint.txt || kind, kind, true);
       } catch (eE) {}
@@ -3216,14 +3222,12 @@
         });
       if (veins.length) {
         const v = veins[0];
-        const faced = await approachAndFaceVein(win, me, v);
-        if (!faced) {
-          markVeinScanned(v.key);
-          log('Большой лес: не встал лицом к ' + v.key + ' — ухожу');
-          BOT.state.lastSearchEmpty = true;
-          return true;
-        }
+        await approachAndFaceVein(win, me, v);
         await bigForestDoSearch(win);
+        const after = BOT.state.bigForestHint;
+        if (!(after && (after.front || after.dir === 'left' || after.dir === 'right' || after.dir === 'back'))) {
+          BOT.state.lastSearchEmpty = true;
+        }
         return true;
       }
       // на карте не видно (часто деревья) — поиск с места, без шага на 2 клетки
@@ -3506,7 +3510,12 @@
     }
 
     // 1) реакция на поиск: «перед вами» / «слева» / «в радиусе» — раньше трав и блуждания
-    if (needCraft && hintFresh(hint, 25000) && craftKind) {
+    if (
+      needCraft &&
+      hintFresh(hint, 25000) &&
+      craftKind &&
+      !(BOT.state.lastSearchEmpty || (BOT.state.lastEquipFailAt && Date.now() - BOT.state.lastEquipFailAt < 30000))
+    ) {
       const reacted = await reactToCraftHint(win, me, hint);
       if (reacted) return;
     }
@@ -3515,8 +3524,12 @@
     if (needCraft && hintFresh(hint) && hint.front) {
       const mineKind = craftKind || aheadKind;
       if (mineKind === 'copper' || mineKind === 'iron' || mineKind === 'gold' || mineKind === 'tree') {
-        await bigForestTryDobycha(win, 'перед вами', mineKind);
-        return;
+        if (BOT.state.lastEquipFailAt && Date.now() - BOT.state.lastEquipFailAt < 30000) {
+          log('Большой лес: нет инструмента, пауза 30с — иду блуждать');
+        } else {
+          await bigForestTryDobycha(win, 'перед вами', mineKind);
+          return;
+        }
       }
     }
 
@@ -3532,7 +3545,11 @@
             const hStick = parseBigForestHint(bigForestReadText(win)) || BOT.state.bigForestHint;
             if (hStick && hStick.front) {
               BOT.state.bigForestHint = hStick;
-              await bigForestTryDobycha(win, 'перед вами', t.kind || ak);
+              if (BOT.state.lastEquipFailAt && Date.now() - BOT.state.lastEquipFailAt < 30000) {
+                log('Большой лес: нет инструмента, пауза 30с — иду блуждать');
+              } else {
+                await bigForestTryDobycha(win, 'перед вами', t.kind || ak);
+              }
             }
             return;
           }
@@ -3578,7 +3595,14 @@
     }
 
     // 3) пустой поиск (нет «в радиусе 5») — уходим на 6–8 клеток, не сканируем соседние текстуры
-    if (needCraft && BOT.state.lastSearchEmpty) {
+    if (
+      needCraft &&
+      (BOT.state.lastSearchEmpty ||
+        (hintFresh(BOT.state.bigForestHint, 8000) &&
+          BOT.state.bigForestHint &&
+          BOT.state.bigForestHint.dir === 'radius' &&
+          !BOT.state.bigForestHint.front))
+    ) {
       await leaveEmptySearchArea(win, me);
       return;
     }
