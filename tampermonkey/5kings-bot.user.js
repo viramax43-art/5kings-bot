@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         5Kings Bot
 // @namespace    https://5kings.ru/
-// @version      1.2.40
+// @version      1.2.41
 // @description  Лес + королевские хаосы 5kings.ru. Только ТЗ. Локальный userscript.
 // @author       freelance
 // @match        http://5kings.ru/*
@@ -71,7 +71,7 @@
     }
   }
 
-  const VERSION = '1.2.40';
+  const VERSION = '1.2.41';
 
   try {
     console.log('%c[5k-bot] executed v' + VERSION + ' @ ' + location.href, 'background:#1a5c1a;color:#fff;padding:4px');
@@ -516,6 +516,11 @@
       lastChaosNavAt: 0,
       lastJoinAt: 0,
       gotoTarget: null,
+      gotoOnly: false,
+      lastHintFp: '',
+      lastHintFpAt: 0,
+      craftHuntUntil: 0,
+      craftRadiusTried: {},
     },
   };
 
@@ -1243,43 +1248,114 @@
   const FRONT_EVENT_RE = /прямо\s+перед\s+вами|перед\s+вами/i;
   const STRICT_FRONT_RE = /прямо\s+перед\s+вами/i;
 
+  /** Берём последнее отдельное craft-сообщение — не смешиваем «слева» и «справа» в одном blob. */
+  function extractLastCraftMessage(text) {
+    const value = String(text || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!value) return '';
+    const parts = value.split(/[.!?…]+\s*|\n+/);
+    let last = '';
+    for (let i = 0; i < parts.length; i++) {
+      const p = String(parts[i] || '').trim();
+      if (!p) continue;
+      if (CRAFT_EVENT_RE.test(p) || FRONT_EVENT_RE.test(p)) last = p;
+    }
+    if (last) return last;
+    const re =
+      /(?:сосна|дуб|красн\w*\s*дерев|медь|желез|золот|дерев[оа])[^.]{0,100}(?:в\s+радиусе|прямо\s+перед\s+вами|перед\s+вами|слева|справа|сзади|позади)[^.]{0,40}/gi;
+    let m;
+    let lastM = '';
+    while ((m = re.exec(value))) lastM = m[0];
+    return (lastM || value).replace(/\s+/g, ' ').trim();
+  }
+
   function parseBigForestHint(text) {
     if (!text) return null;
 
-    const value = String(text).replace(/\s+/g, ' ').trim();
+    const value = extractLastCraftMessage(text);
+    if (!value) return null;
 
     if (!CRAFT_EVENT_RE.test(value) && !FRONT_EVENT_RE.test(value)) {
       return null;
     }
 
-    let dir = null;
-
-    if (STRICT_FRONT_RE.test(value)) {
-      dir = 'front';
-    } else if (/слева/i.test(value)) {
-      dir = 'left';
-    } else if (/справа/i.test(value)) {
-      dir = 'right';
-    } else if (/сзади|позади/i.test(value)) {
-      dir = 'back';
-    } else if (/радиусе/i.test(value)) {
-      dir = 'radius';
-    } else if (FRONT_EVENT_RE.test(value)) {
-      dir = 'frontish';
-    } else {
-      dir = 'near';
+    // направление по ПОСЛЕДНЕМУ маркеру в этом сообщении (не приоритет front>left)
+    const markers = [];
+    function pushAll(re, dir) {
+      const r = new RegExp(re.source, 'gi');
+      let m;
+      while ((m = r.exec(value))) markers.push({ dir: dir, i: m.index });
     }
+    pushAll(/прямо\s+перед\s+вами/i, 'front');
+    pushAll(/слева/i, 'left');
+    pushAll(/справа/i, 'right');
+    pushAll(/сзади|позади/i, 'back');
+    pushAll(/радиусе/i, 'radius');
+    pushAll(/перед\s+вами/i, 'frontish');
 
+    markers.sort(function (a, b) {
+      return a.i - b.i;
+    });
+    let dir = 'near';
+    if (markers.length) dir = markers[markers.length - 1].dir;
+    // «перед вами» без «прямо» — frontish, но если уже есть front — front
+    if (dir === 'frontish' && /прямо\s+перед\s+вами/i.test(value)) dir = 'front';
+
+    const fp = dir + '|' + value.slice(0, 200).toLowerCase();
     return {
       t: Date.now(),
       dir: dir,
       front: dir === 'front',
       txt: value.slice(-500),
+      fp: fp,
     };
   }
 
   function hintFresh(hint, ms) {
     return !!(hint && Date.now() - (hint.t || 0) < (ms || 18000));
+  }
+
+  /** Принять подсказку только если это новое сообщение; сохранить курс/клетку на момент поиска. */
+  function acceptForestHint(win, text, forceNew) {
+    const hint = parseBigForestHint(text);
+    if (!hint) return null;
+    const fp = hint.fp || hint.dir + '|' + String(hint.txt || '').slice(0, 200).toLowerCase();
+    if (
+      !forceNew &&
+      BOT.state.lastHintFp === fp &&
+      Date.now() - (BOT.state.lastHintFpAt || 0) < 90000
+    ) {
+      // повторное чтение того же текста — не освежаем t (иначе «слева» крутит снова)
+      return BOT.state.bigForestHint && BOT.state.bigForestHint.fp === fp ? BOT.state.bigForestHint : null;
+    }
+    const me = discoverMeBig(win) || getMe(win);
+    hint.fp = fp;
+    hint.x = me ? Number(me.x) : null;
+    hint.y = me ? Number(me.y) : null;
+    hint.napr = facingNapr(win) || currentNapr(win);
+    BOT.state.lastHintFp = fp;
+    BOT.state.lastHintFpAt = Date.now();
+    BOT.state.bigForestHint = hint;
+    if (hint.dir === 'radius' || hint.dir === 'near') {
+      BOT.state.craftHuntUntil = Date.now() + 60000;
+    }
+    return hint;
+  }
+
+  function craftHuntActive() {
+    return Date.now() < (BOT.state.craftHuntUntil || 0);
+  }
+
+  function markCraftRadiusTried(key) {
+    if (!BOT.state.craftRadiusTried) BOT.state.craftRadiusTried = {};
+    if (key) BOT.state.craftRadiusTried[key] = Date.now();
+  }
+
+  function craftRadiusWasTried(key) {
+    const t = BOT.state.craftRadiusTried && BOT.state.craftRadiusTried[key];
+    return !!(t && Date.now() - t < 120000);
   }
 
   function nfImgMeta(win, type) {
@@ -2711,10 +2787,9 @@
         const vis = modal && modal.style && modal.style.display === 'block';
         if (vis) modalTxt = String(modal.innerText || modal.innerHTML || '');
       } catch (eM) {}
-      const parsed = parseBigForestHint(modalTxt);
+      const parsed = acceptForestHint(win, modalTxt, true);
       if (parsed) {
         foundHint = parsed;
-        BOT.state.bigForestHint = parsed;
         BOT.state.lastSearchEmpty = false;
         break;
       }
@@ -2727,9 +2802,8 @@
       await sleep(280);
     }
     const txt = bigForestReadText(win);
-    const parsed2 = foundHint || parseBigForestHint(txt);
+    const parsed2 = foundHint || acceptForestHint(win, txt, true);
     if (parsed2) {
-      BOT.state.bigForestHint = parsed2;
       BOT.state.lastSearchEmpty = false;
       log('Большой лес: поиск → «' + String(parsed2.txt || '').replace(/\s+/g, ' ').slice(0, 80) + '»');
     } else {
@@ -3154,7 +3228,11 @@
     if (!me) return false;
 
     const kind = craftKindFromHint(hint);
-    const base = facingNapr(win) || currentNapr(win);
+    // курс на момент поиска (не после approachAndFaceVein)
+    const base =
+      hint.napr >= 1 && hint.napr <= 8
+        ? Number(hint.napr)
+        : facingNapr(win) || currentNapr(win);
     const targetNapr = naprRelative(win, base, hint.dir);
 
     log(
@@ -3223,8 +3301,12 @@
       txt: 'прямо перед вами ' + String((hint && hint.txt) || kind || ''),
     };
     log('Большой лес: старт добычи');
-    await bigForestTryDobycha(win, 'перед вами', kind || craftKindFromHint(hint));
-    return true;
+    const mined = await bigForestTryDobycha(win, 'перед вами', kind || craftKindFromHint(hint));
+    if (mined) {
+      BOT.state.craftHuntUntil = 0;
+      BOT.state.lastHintFp = hint.fp || BOT.state.lastHintFp;
+    }
+    return !!mined;
   }
 
   /** Клик по клетке карты (GotoKletka) — как живой игрок, без кручения на месте. */
@@ -3315,15 +3397,17 @@
       return await mineByRelativeHint(win, hint);
     }
 
-    // в радиусе — только поиск/подход к жиле; НЕ считать это командой «уйти дальше»
+    // в радиусе — перебор жил по очереди; неудачный кандидат помечаем и берём следующий
     if (hint.dir === 'radius' || hint.dir === 'near' || hint.dir === 'frontish') {
       log('Большой лес: «в радиусе» ' + kind);
+      BOT.state.craftHuntUntil = Date.now() + 60000;
       try {
         await equipCraftTool(hint.txt || kind, kind, true);
       } catch (eEq2) {}
       const radius = Math.max(1, Number(BOT.cfg.forest.searchRadius) || 5);
       const veins = listBigForestItems(win, 'craft')
         .filter(function (it) {
+          if (veinWasScanned(it.key) || craftRadiusWasTried(it.key)) return false;
           if (kind === 'tree') return it.kind === 'tree';
           if (kind === 'gold') return it.kind === 'gold' || it.kind === 'copper' || it.kind === 'iron';
           return it.kind === kind;
@@ -3336,14 +3420,23 @@
         });
       if (veins.length) {
         const v = veins[0];
-        await approachAndFaceVein(win, me, v);
+        const faced = await approachAndFaceVein(win, me, v);
+        if (!faced) {
+          markCraftRadiusTried(v.key);
+          markVeinScanned(v.key);
+          log('Большой лес: не встал к ' + v.key + ' — следующая жила', 'err');
+          return true;
+        }
         await bigForestDoSearch(win);
         const after = BOT.state.bigForestHint;
-        // относительная подсказка после поиска — сразу добыть, не уходить
         if (after && (after.dir === 'left' || after.dir === 'right' || after.dir === 'back' || after.front)) {
           return await reactToCraftHint(win, discoverMeBig(win) || me, after);
         }
-        BOT.state.lastSearchEmpty = false;
+        markCraftRadiusTried(v.key);
+        markVeinScanned(v.key);
+        if (BOT.state.lastSearchEmpty) {
+          log('Большой лес: жила ' + v.key + ' пустая — следующая');
+        }
         return true;
       }
       await bigForestDoSearch(win);
@@ -3351,7 +3444,9 @@
       if (after2 && (after2.dir === 'left' || after2.dir === 'right' || after2.dir === 'back' || after2.front)) {
         return await reactToCraftHint(win, discoverMeBig(win) || me, after2);
       }
-      BOT.state.lastSearchEmpty = false;
+      if (BOT.state.lastSearchEmpty) {
+        BOT.state.craftHuntUntil = 0;
+      }
       return true;
     }
     return false;
@@ -3396,9 +3491,8 @@
     win.OpenModal = function (text, atack, data) {
       try {
         const txt = String(text || '');
-        const hint = parseBigForestHint(txt);
+        const hint = acceptForestHint(win, txt, true);
         if (hint) {
-          BOT.state.bigForestHint = hint;
           log('Большой лес: событие «' + txt.replace(/\s+/g, ' ').slice(0, 90) + '»');
         }
         if (TOOL_NEED_RE.test(txt) || BASKET_NEED_RE.test(txt)) {
@@ -3418,8 +3512,10 @@
       const modal = win.document && win.document.getElementById('modal_form');
       if (modal && modal.style && modal.style.display === 'block') {
         const mtxt = (modal.innerText || '') + '';
-        const hint = parseBigForestHint(mtxt);
-        if (hint) BOT.state.bigForestHint = hint;
+        const hint = acceptForestHint(win, mtxt, true);
+        if (hint) {
+          /* already stored */
+        }
         if (typeof win.ClickAnswer === 'function') win.ClickAnswer(0);
         else {
           const ov = win.document.getElementById('overlay');
@@ -3535,10 +3631,15 @@
       if (gd === 0) {
         log('Большой лес: точка ' + gx + ',' + gy + ' достигнута', 'ok');
         BOT.state.gotoTarget = null;
+        if (BOT.state.gotoOnly) {
+          BOT.state.gotoOnly = false;
+          log('Точка: режим «гоу» завершён — стоп леса');
+          stopForest();
+          return;
+        }
       } else {
         log('Большой лес: к точке ' + gx + ',' + gy + ' (осталось ' + gd + ')');
         let progressed = false;
-        // несколько длинных переходов подряд без паузы тика — плавнее, чем шаг-пауза-шаг
         for (let hop = 0; hop < 16 && BOT.state.gotoTarget; hop++) {
           const meHop = discoverMeBig(win) || getMe(win);
           if (!meHop) break;
@@ -3546,6 +3647,11 @@
           if (gd === 0) {
             log('Большой лес: точка ' + gx + ',' + gy + ' достигнута', 'ok');
             BOT.state.gotoTarget = null;
+            if (BOT.state.gotoOnly) {
+              BOT.state.gotoOnly = false;
+              log('Точка: режим «гоу» завершён — стоп леса');
+              stopForest();
+            }
             return;
           }
           const beforeKey = meHop.x + ',' + meHop.y;
@@ -3566,9 +3672,20 @@
         if (BOT.state.gotoTarget && !progressed) {
           log('Большой лес: к точке ' + gx + ',' + gy + ' нет шага — стоп точки', 'err');
           BOT.state.gotoTarget = null;
+          if (BOT.state.gotoOnly) {
+            BOT.state.gotoOnly = false;
+            stopForest();
+          }
         }
         return;
       }
+    }
+
+    // режим «только гоу» без цели — не блуждаем
+    if (BOT.state.gotoOnly && !BOT.state.gotoTarget) {
+      BOT.state.gotoOnly = false;
+      stopForest();
+      return;
     }
 
     const txtModal = (function () {
@@ -3580,9 +3697,8 @@
         return '';
       }
     })();
-    const txt = bigForestReadText(win);
-    const parsed = parseBigForestHint(txtModal || txt);
-    if (parsed) BOT.state.bigForestHint = parsed;
+    // только модалка как новый источник; чат/body — без force (не освежаем старый fp)
+    if (txtModal) acceptForestHint(win, txtModal, false);
     // корзина — только по модалке/явному флагу, не по чату (иначе ложные срабатывания)
     if (BASKET_NEED_RE.test(txtModal) || BOT.state.needBasket) {
       BOT.state.needBasket = false;
@@ -3662,7 +3778,7 @@
           const ak = aheadKind || t.kind;
           if (ak === 'copper' || ak === 'iron' || ak === 'gold' || ak === 'tree') {
             await bigForestDoSearch(win);
-            const hStick = parseBigForestHint(bigForestReadText(win)) || BOT.state.bigForestHint;
+            const hStick = acceptForestHint(win, bigForestReadText(win), false) || BOT.state.bigForestHint;
             if (hStick && hStick.front) {
               BOT.state.bigForestHint = hStick;
               if (BOT.state.lastEquipFailAt && Date.now() - BOT.state.lastEquipFailAt < 30000) {
@@ -3730,17 +3846,22 @@
       }
     }
 
-    // 3) пустой поиск — уходим на 6–8 клеток. «в радиусе» без front — НЕ уход, а остаёмся искать.
-    if (
-      needCraft &&
-      hintFresh(BOT.state.bigForestHint, 8000) &&
-      BOT.state.bigForestHint &&
-      BOT.state.bigForestHint.dir === 'radius' &&
-      !BOT.state.bigForestHint.front
-    ) {
+    // 3) охота по «в радиусе» — без блуждания; пустой поиск — уход на 6–8
+    if (needCraft && craftHuntActive()) {
       BOT.state.lastSearchEmpty = false;
-      // радиус ≠ команда движения; ждём left/right/front от следующего поиска
-    } else if (needCraft && BOT.state.lastSearchEmpty) {
+      if (hintFresh(hint, 25000) && craftKind) {
+        const reactedHunt = await reactToCraftHint(win, me, hint);
+        if (reactedHunt) return;
+      }
+      if (BOT.cfg.forest.autoSearch && (BOT.state.stepsSinceSearch || 0) >= every) {
+        await bigForestDoSearch(win);
+        return;
+      }
+      log('Большой лес: охота за ресурсом — жду left/right/front');
+      await sleep(700);
+      return;
+    }
+    if (needCraft && BOT.state.lastSearchEmpty) {
       await leaveEmptySearchArea(win, me);
       return;
     }
@@ -7043,7 +7164,8 @@
     }, delay);
   }
 
-  async function startForest() {
+  async function startForest(opts) {
+    opts = opts || {};
     try {
       if (!checkLicense()) {
         log('Лицензия блокирует старт — снимите галку «привязка UserID»', 'err');
@@ -7150,15 +7272,20 @@
         BOT.state.busySince = 0;
         BOT.state.radarCalibrated = false;
         BOT.state.stepTarget = null;
-        turnToFace(getActWin(), startN);
+        // «гоу» / активная точка — не крутить на стартовый курс
+        if (!(opts.skipStartTurn || BOT.state.gotoTarget || BOT.state.gotoOnly)) {
+          turnToFace(getActWin(), startN);
+        }
         log(
           'Лес СТАРТ v' +
             VERSION +
             ' BIG @ ' +
             forestHref(getActWin()).split('/').pop() +
-            ' курс ' +
-            startN +
-            (String(BOT.cfg.forest.startDir || 'face') === 'face' ? ' (как стоит)' : ''),
+            (BOT.state.gotoTarget
+              ? ' → точка ' + BOT.state.gotoTarget.x + ',' + BOT.state.gotoTarget.y
+              : ' курс ' +
+                startN +
+                (String(BOT.cfg.forest.startDir || 'face') === 'face' ? ' (как стоит)' : '')),
           'ok'
         );
         scheduleForest(true);
@@ -7199,6 +7326,8 @@
     flagSet(FLAG.forest, false);
     BOT.state.craftBusy = false;
     BOT.state.gotoTarget = null;
+    BOT.state.gotoOnly = false;
+    BOT.state.craftHuntUntil = 0;
     if (forestSched) clearTimeout(forestSched);
     log('Лес СТОП');
     updateUi();
@@ -7372,18 +7501,37 @@
     };
     panel.querySelector('#k5-forest-stop').onclick = stopForest;
     panel.querySelector('#k5-goto').onclick = function () {
-      const x = Number(panel.querySelector('#k5-goto-x').value);
-      const y = Number(panel.querySelector('#k5-goto-y').value);
-      if (!isFinite(x) || !isFinite(y)) {
+      const xs = String(panel.querySelector('#k5-goto-x').value || '').trim();
+      const ys = String(panel.querySelector('#k5-goto-y').value || '').trim();
+      if (!xs || !ys) {
         log('Точка: введите X и Y', 'err');
         return;
       }
+      const x = Number(xs);
+      const y = Number(ys);
+      if (!isFinite(x) || !isFinite(y)) {
+        log('Точка: X и Y должны быть числами', 'err');
+        return;
+      }
       BOT.state.gotoTarget = { x: Math.round(x), y: Math.round(y) };
-      log('Точка: иду к ' + BOT.state.gotoTarget.x + ',' + BOT.state.gotoTarget.y, 'ok');
-      if (!flagGet(FLAG.forest)) startForest();
+      const alreadyForest = flagGet(FLAG.forest);
+      BOT.state.gotoOnly = !alreadyForest;
+      log(
+        'Точка: иду к ' +
+          BOT.state.gotoTarget.x +
+          ',' +
+          BOT.state.gotoTarget.y +
+          (BOT.state.gotoOnly ? ' (только гоу)' : ''),
+        'ok'
+      );
+      if (!alreadyForest) startForest({ skipStartTurn: true });
     };
     panel.querySelector('#k5-goto-stop').onclick = function () {
       BOT.state.gotoTarget = null;
+      if (BOT.state.gotoOnly) {
+        BOT.state.gotoOnly = false;
+        stopForest();
+      }
       log('Точка: отмена');
     };
     panel.querySelector('#k5-discover').onclick = function () {

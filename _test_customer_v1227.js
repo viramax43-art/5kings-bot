@@ -60,7 +60,7 @@ ok('B2 clone again next turn', /wasOurTurn/.test(src) && /можно клони�
 ok('B3 clone on field does not lock fight', !/if \(battleHasOwnHelper/.test(src));
 ok('B4 no 25s lock after clone', !/helperFailUntil = Date\.now\(\) \+ 25000/.test(src));
 
-ok('V version 1.2.40', /@version\s+1\.2\.40/.test(src) && /VERSION = '1\.2\.40'/.test(src));
+ok('V version 1.2.41', /@version\s+1\.2\.41/.test(src) && /VERSION = '1\.2\.41'/.test(src));
 
 console.log('--- 8. радар / бой-таймер / точка ---');
 ok('8a radar default on', /useRadar: true/.test(src) && !/cfg\.forest\.useRadar = false/.test(src));

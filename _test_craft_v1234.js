@@ -20,7 +20,7 @@ function ok(name, cond, extra) {
   }
 }
 
-ok('V 1.2.40', /@version\s+1\.2\.40/.test(src));
+ok('V 1.2.41', /@version\s+1\.2\.41/.test(src));
 ok('reactToCraftHint', /async function reactToCraftHint/.test(src));
 ok('left via mineByRelative', /mineByRelativeHint/.test(src) && /naprRelative/.test(src));
 ok('hint left branch', /hint\.dir === 'left' \|\| hint\.dir === 'right' \|\| hint\.dir === 'back'/.test(src));
@@ -32,6 +32,8 @@ ok('bag iframe', /k5-bag/.test(src) && /bag_type_17_mode_0\.html/.test(src));
 ok('force equip at vein', /equipCraftTool\(hint\.txt \|\| kind, kind, true\)/.test(src));
 ok('keep hint after mine', /craftStickUntil/.test(src) && /craftStickTarget/.test(src));
 ok('axe for trees', /TOOL_MAP[\s\S]*?tree:[\s\S]*?axe/.test(src));
+ok('acceptForestHint', /function acceptForestHint/.test(src));
+ok('gotoOnly mode', /gotoOnly/.test(src));
 
 console.log('\nCraft fix: ' + passed + ' PASS, ' + failed.length + ' FAIL');
 if (failed.length) {
