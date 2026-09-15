@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         5Kings Bot
 // @namespace    https://5kings.ru/
-// @version      1.2.41
+// @version      1.2.42
 // @description  Лес + королевские хаосы 5kings.ru. Только ТЗ. Локальный userscript.
 // @author       freelance
 // @match        http://5kings.ru/*
@@ -71,7 +71,7 @@
     }
   }
 
-  const VERSION = '1.2.41';
+  const VERSION = '1.2.42';
 
   try {
     console.log('%c[5k-bot] executed v' + VERSION + ' @ ' + location.href, 'background:#1a5c1a;color:#fff;padding:4px');
@@ -1250,25 +1250,47 @@
 
   /** Берём последнее отдельное craft-сообщение — не смешиваем «слева» и «справа» в одном blob. */
   function extractLastCraftMessage(text) {
-    const value = String(text || '')
-      .replace(/\u00a0/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (!value) return '';
-    const parts = value.split(/[.!?…]+\s*|\n+/);
+    const raw = String(text || '').replace(/\u00a0/g, ' ');
+    if (!raw.trim()) return '';
+    // строки чата / блоки без точки между сообщениями
+    const lines = raw.split(/\r?\n+/);
     let last = '';
+    for (let i = 0; i < lines.length; i++) {
+      const p = String(lines[i] || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!p) continue;
+      if (CRAFT_EVENT_RE.test(p) || FRONT_EVENT_RE.test(p)) last = p;
+    }
+    const value = raw.replace(/\s+/g, ' ').trim();
+    // предложения, двойные пробелы, метки времени HH:MM
+    const parts = value.split(/[.!?…]+\s*|\s{2,}|(?:\b\d{1,2}:\d{2}(?::\d{2})?\b)/);
     for (let i = 0; i < parts.length; i++) {
       const p = String(parts[i] || '').trim();
       if (!p) continue;
       if (CRAFT_EVENT_RE.test(p) || FRONT_EVENT_RE.test(p)) last = p;
     }
     if (last) return last;
+    // fallback без требования точки — последний craft+направление в тексте
     const re =
-      /(?:сосна|дуб|красн\w*\s*дерев|медь|желез|золот|дерев[оа])[^.]{0,100}(?:в\s+радиусе|прямо\s+перед\s+вами|перед\s+вами|слева|справа|сзади|позади)[^.]{0,40}/gi;
+      /(?:сосна|дуб|красн\w*\s*дерев|медь|желез|золот|дерев[оа])[\s\S]{0,120}?(?:в\s+радиусе|прямо\s+перед\s+вами|перед\s+вами|слева|справа|сзади|позади)[\s\S]{0,40}/gi;
     let m;
     let lastM = '';
     while ((m = re.exec(value))) lastM = m[0];
     return (lastM || value).replace(/\s+/g, ' ').trim();
+  }
+
+  function craftHintFingerprint(dir, value) {
+    const norm = String(value || '')
+      .toLowerCase()
+      .replace(/\d+/g, '#')
+      .replace(/\s+/g, ' ')
+      .trim();
+    let kind = '';
+    try {
+      kind = craftKindFromHint({ txt: value }) || '';
+    } catch (eK) {}
+    return [kind, dir || '', norm].join('|');
   }
 
   function parseBigForestHint(text) {
@@ -1300,10 +1322,9 @@
     });
     let dir = 'near';
     if (markers.length) dir = markers[markers.length - 1].dir;
-    // «перед вами» без «прямо» — frontish, но если уже есть front — front
     if (dir === 'frontish' && /прямо\s+перед\s+вами/i.test(value)) dir = 'front';
 
-    const fp = dir + '|' + value.slice(0, 200).toLowerCase();
+    const fp = craftHintFingerprint(dir, value);
     return {
       t: Date.now(),
       dir: dir,
@@ -1321,7 +1342,7 @@
   function acceptForestHint(win, text, forceNew) {
     const hint = parseBigForestHint(text);
     if (!hint) return null;
-    const fp = hint.fp || hint.dir + '|' + String(hint.txt || '').slice(0, 200).toLowerCase();
+    const fp = hint.fp || craftHintFingerprint(hint.dir, hint.txt);
     if (
       !forceNew &&
       BOT.state.lastHintFp === fp &&
@@ -3294,19 +3315,30 @@
     }
 
     // после поворота ресурс должен быть «прямо перед вами»
+    const prevHint = BOT.state.bigForestHint;
     BOT.state.bigForestHint = {
       t: Date.now(),
       dir: 'front',
       front: true,
       txt: 'прямо перед вами ' + String((hint && hint.txt) || kind || ''),
+      fp: craftHintFingerprint('front', 'прямо перед вами ' + String((hint && hint.txt) || kind || '')),
+      napr: targetNapr,
+      x: me.x,
+      y: me.y,
     };
     log('Большой лес: старт добычи');
     const mined = await bigForestTryDobycha(win, 'перед вами', kind || craftKindFromHint(hint));
-    if (mined) {
-      BOT.state.craftHuntUntil = 0;
-      BOT.state.lastHintFp = hint.fp || BOT.state.lastHintFp;
+    if (!mined) {
+      // не оставлять свежий front — иначе тик снова долбит ту же клетку
+      BOT.state.bigForestHint = null;
+      BOT.state.lastSearchEmpty = true;
+      BOT.state.lastHintFp = (prevHint && prevHint.fp) || hint.fp || BOT.state.lastHintFp;
+      BOT.state.lastHintFpAt = Date.now();
+      return false;
     }
-    return !!mined;
+    BOT.state.craftHuntUntil = 0;
+    BOT.state.lastHintFp = hint.fp || BOT.state.lastHintFp;
+    return true;
   }
 
   /** Клик по клетке карты (GotoKletka) — как живой игрок, без кручения на месте. */
@@ -3674,7 +3706,9 @@
           BOT.state.gotoTarget = null;
           if (BOT.state.gotoOnly) {
             BOT.state.gotoOnly = false;
+            log('Точка: режим «гоу» — маршрут не удался, стоп леса', 'err');
             stopForest();
+            return;
           }
         }
         return;
