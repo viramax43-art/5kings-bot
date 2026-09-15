@@ -20,9 +20,9 @@ function ok(name, cond, extra) {
   }
 }
 
-ok('V 1.2.39', /@version\s+1\.2\.39/.test(src));
+ok('V 1.2.40', /@version\s+1\.2\.40/.test(src));
 ok('reactToCraftHint', /async function reactToCraftHint/.test(src));
-ok('left via in-place turn', /поворот на месте курс/.test(src) && /naprFromHintDir/.test(src));
+ok('left via mineByRelative', /mineByRelativeHint/.test(src) && /naprRelative/.test(src));
 ok('hint left branch', /hint\.dir === 'left' \|\| hint\.dir === 'right' \|\| hint\.dir === 'back'/.test(src));
 ok('radius branch', /hint\.dir === 'radius'/.test(src) && /в радиусе/.test(src));
 ok('no overwrite tree with copper', /approachAndFaceVein/.test(src) && !/scanKind === 'tree'\) scanKind = BOT\.state\.veinScanKind/.test(src));

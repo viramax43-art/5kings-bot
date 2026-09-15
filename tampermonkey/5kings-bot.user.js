@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         5Kings Bot
 // @namespace    https://5kings.ru/
-// @version      1.2.39
+// @version      1.2.40
 // @description  Лес + королевские хаосы 5kings.ru. Только ТЗ. Локальный userscript.
 // @author       freelance
 // @match        http://5kings.ru/*
@@ -71,7 +71,7 @@
     }
   }
 
-  const VERSION = '1.2.39';
+  const VERSION = '1.2.40';
 
   try {
     console.log('%c[5k-bot] executed v' + VERSION + ' @ ' + location.href, 'background:#1a5c1a;color:#fff;padding:4px');
@@ -1245,16 +1245,37 @@
 
   function parseBigForestHint(text) {
     if (!text) return null;
-    if (!CRAFT_EVENT_RE.test(text) && !FRONT_EVENT_RE.test(text)) return null;
+
+    const value = String(text).replace(/\s+/g, ' ').trim();
+
+    if (!CRAFT_EVENT_RE.test(value) && !FRONT_EVENT_RE.test(value)) {
+      return null;
+    }
+
     let dir = null;
-    if (STRICT_FRONT_RE.test(text)) dir = 'front';
-    else if (/слева/i.test(text)) dir = 'left';
-    else if (/справа/i.test(text)) dir = 'right';
-    else if (/сзади|позади/i.test(text)) dir = 'back';
-    else if (/радиус/i.test(text)) dir = 'radius';
-    else if (FRONT_EVENT_RE.test(text)) dir = 'frontish';
-    else dir = 'near';
-    return { t: Date.now(), dir: dir, front: STRICT_FRONT_RE.test(text), txt: text.slice(0, 200) };
+
+    if (STRICT_FRONT_RE.test(value)) {
+      dir = 'front';
+    } else if (/слева/i.test(value)) {
+      dir = 'left';
+    } else if (/справа/i.test(value)) {
+      dir = 'right';
+    } else if (/сзади|позади/i.test(value)) {
+      dir = 'back';
+    } else if (/радиусе/i.test(value)) {
+      dir = 'radius';
+    } else if (FRONT_EVENT_RE.test(value)) {
+      dir = 'frontish';
+    } else {
+      dir = 'near';
+    }
+
+    return {
+      t: Date.now(),
+      dir: dir,
+      front: dir === 'front',
+      txt: value.slice(-500),
+    };
   }
 
   function hintFresh(hint, ms) {
@@ -1788,6 +1809,28 @@
 
   function setLocalNapr(n) {
     BOT.state.localNapr = ((Number(n) - 1 + 8) % 8) + 1;
+  }
+
+  /** Относительный поворот: left/right = ±2 шага (кардиналь в 8-направлениях). */
+  function naprRelative(win, baseNapr, relative) {
+    const base = Number(baseNapr);
+
+    if (!(base >= 1 && base <= 8)) {
+      return currentNapr(win);
+    }
+
+    switch (relative) {
+      case 'left':
+        return ((base - 1 + 6) % 8) + 1;
+      case 'right':
+        return ((base - 1 + 2) % 8) + 1;
+      case 'back':
+        return ((base - 1 + 4) % 8) + 1;
+      case 'front':
+      case 'frontish':
+      default:
+        return base;
+    }
   }
 
   function naprExactDelta(win, fromX, fromY, toX, toY) {
@@ -3095,13 +3138,93 @@
     return null;
   }
 
-  /** Поворот по подсказке поиска (слева/справа/сзади) — без ухода с клетки. */
+  /** Поворот по подсказке поиска (слева/справа/сзади) — относительно текущего курса. */
   function naprFromHintDir(win, dir) {
-    const cur = currentNapr(win);
-    if (dir === 'left') return cur === 1 ? 8 : cur - 1;
-    if (dir === 'right') return cur === 8 ? 1 : cur + 1;
-    if (dir === 'back') return ((cur + 3) % 8) + 1;
-    return cur;
+    return naprRelative(win, facingNapr(win) || currentNapr(win), dir);
+  }
+
+  /**
+   * «медь слева от вас»: проверить инструмент → повернуться относительно курса → добыча.
+   * Без approachAndFaceVein / GotoKletka к старым координатам.
+   */
+  async function mineByRelativeHint(win, hint) {
+    if (!hint || !hint.dir) return false;
+
+    const me = discoverMeBig(win) || getMe(win);
+    if (!me) return false;
+
+    const kind = craftKindFromHint(hint);
+    const base = facingNapr(win) || currentNapr(win);
+    const targetNapr = naprRelative(win, base, hint.dir);
+
+    log(
+      'Большой лес: подсказка «' +
+        hint.dir +
+        '» — текущий курс ' +
+        base +
+        ', направление добычи ' +
+        targetNapr
+    );
+
+    if (BOT.state.lastEquipFailAt && Date.now() - BOT.state.lastEquipFailAt < 30000) {
+      log('Большой лес: нет инструмента, пауза 30с — иду блуждать');
+      return false;
+    }
+
+    let toolOk = !BOT.cfg.forest.equipTool;
+    try {
+      if (BOT.cfg.forest.equipTool) {
+        toolOk = await equipCraftTool(hint.txt || kind || 'copper', kind || 'copper', true);
+      }
+    } catch (e) {
+      log('Большой лес: ошибка проверки инструмента: ' + ((e && e.message) || e), 'err');
+      return false;
+    }
+    if (!toolOk) {
+      log('Большой лес: подходящий инструмент не найден', 'err');
+      BOT.state.lastEquipFailAt = Date.now();
+      return false;
+    }
+    log('Большой лес: проверка инструмента выполнена', 'ok');
+
+    const turned = turnToFace(win, targetNapr);
+    BOT.state.wanderNapr = targetNapr;
+    if (turned) {
+      log('Большой лес: поворот в направление ' + targetNapr);
+      await sleep(450);
+    } else {
+      await sleep(150);
+    }
+
+    const actual = facingNapr(win) || currentNapr(win);
+    if (actual !== targetNapr) {
+      // доворот ещё раз — после Goto иногда local/game расходятся
+      turnToFace(win, targetNapr);
+      await sleep(400);
+    }
+    const actual2 = facingNapr(win) || currentNapr(win);
+    if (actual2 !== targetNapr) {
+      log(
+        'Большой лес: не удалось повернуться в нужное направление ' +
+          targetNapr +
+          ' (сейчас ' +
+          actual2 +
+          ')',
+        'err'
+      );
+      return false;
+    }
+
+    // после поворота ресурс должен быть «прямо перед вами»
+    BOT.state.bigForestHint = {
+      t: Date.now(),
+      dir: 'front',
+      front: true,
+      txt: 'прямо перед вами ' + String((hint && hint.txt) || kind || ''),
+    };
+    log('Большой лес: старт добычи');
+    await bigForestTryDobycha(win, 'перед вами', kind || craftKindFromHint(hint));
+    return true;
   }
 
   /** Клик по клетке карты (GotoKletka) — как живой игрок, без кручения на месте. */
@@ -3187,21 +3310,12 @@
       return true;
     }
 
-    // слева / справа / сзади — поворот на месте (givik ChangeNapr), не уход боком
+    // слева / справа / сзади — инструмент, поворот относительно курса, добыча (без ухода к координате)
     if (hint.dir === 'left' || hint.dir === 'right' || hint.dir === 'back') {
-      const faceN = naprFromHintDir(win, hint.dir);
-      log('Большой лес: «' + hint.dir + '» → поворот на месте курс ' + faceN + ' (' + kind + ')');
-      try {
-        await equipCraftTool(hint.txt || kind, kind, true);
-      } catch (eEq) {}
-      turnToFace(win, faceN);
-      BOT.state.wanderNapr = faceN;
-      await sleep(450);
-      await bigForestDoSearch(win);
-      return true;
+      return await mineByRelativeHint(win, hint);
     }
 
-    // в радиусе — встать лицом к ближайшей жиле этого типа, потом поиск
+    // в радиусе — только поиск/подход к жиле; НЕ считать это командой «уйти дальше»
     if (hint.dir === 'radius' || hint.dir === 'near' || hint.dir === 'frontish') {
       log('Большой лес: «в радиусе» ' + kind);
       try {
@@ -3225,13 +3339,19 @@
         await approachAndFaceVein(win, me, v);
         await bigForestDoSearch(win);
         const after = BOT.state.bigForestHint;
-        if (!(after && (after.front || after.dir === 'left' || after.dir === 'right' || after.dir === 'back'))) {
-          BOT.state.lastSearchEmpty = true;
+        // относительная подсказка после поиска — сразу добыть, не уходить
+        if (after && (after.dir === 'left' || after.dir === 'right' || after.dir === 'back' || after.front)) {
+          return await reactToCraftHint(win, discoverMeBig(win) || me, after);
         }
+        BOT.state.lastSearchEmpty = false;
         return true;
       }
-      // на карте не видно (часто деревья) — поиск с места, без шага на 2 клетки
       await bigForestDoSearch(win);
+      const after2 = BOT.state.bigForestHint;
+      if (after2 && (after2.dir === 'left' || after2.dir === 'right' || after2.dir === 'back' || after2.front)) {
+        return await reactToCraftHint(win, discoverMeBig(win) || me, after2);
+      }
+      BOT.state.lastSearchEmpty = false;
       return true;
     }
     return false;
@@ -3554,6 +3674,22 @@
             return;
           }
         } else if (dStick <= 2) {
+          const relativeHint = BOT.state.bigForestHint;
+          if (
+            relativeHint &&
+            hintFresh(relativeHint, 25000) &&
+            (relativeHint.dir === 'left' ||
+              relativeHint.dir === 'right' ||
+              relativeHint.dir === 'back' ||
+              relativeHint.dir === 'front')
+          ) {
+            const prepared = await mineByRelativeHint(win, relativeHint);
+            if (prepared) {
+              BOT.state.veinScanKind = craftKindFromHint(relativeHint) || relativeHint.dir;
+              // не выполнять переход к координате предыдущего поиска
+              return;
+            }
+          }
           log('Большой лес: возвращаюсь к жиле @' + t.x + ',' + t.y);
           await approachAndFaceVein(win, me, t);
           return;
@@ -3594,15 +3730,17 @@
       }
     }
 
-    // 3) пустой поиск (нет «в радиусе 5») — уходим на 6–8 клеток, не сканируем соседние текстуры
+    // 3) пустой поиск — уходим на 6–8 клеток. «в радиусе» без front — НЕ уход, а остаёмся искать.
     if (
       needCraft &&
-      (BOT.state.lastSearchEmpty ||
-        (hintFresh(BOT.state.bigForestHint, 8000) &&
-          BOT.state.bigForestHint &&
-          BOT.state.bigForestHint.dir === 'radius' &&
-          !BOT.state.bigForestHint.front))
+      hintFresh(BOT.state.bigForestHint, 8000) &&
+      BOT.state.bigForestHint &&
+      BOT.state.bigForestHint.dir === 'radius' &&
+      !BOT.state.bigForestHint.front
     ) {
+      BOT.state.lastSearchEmpty = false;
+      // радиус ≠ команда движения; ждём left/right/front от следующего поиска
+    } else if (needCraft && BOT.state.lastSearchEmpty) {
       await leaveEmptySearchArea(win, me);
       return;
     }
