@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         5Kings Bot
 // @namespace    https://5kings.ru/
-// @version      1.2.44
+// @version      1.2.45
 // @description  Лес + королевские хаосы 5kings.ru. Только ТЗ. Локальный userscript.
 // @author       freelance
 // @match        http://5kings.ru/*
@@ -71,7 +71,7 @@
     }
   }
 
-  const VERSION = '1.2.44';
+  const VERSION = '1.2.45';
 
   try {
     console.log('%c[5k-bot] executed v' + VERSION + ' @ ' + location.href, 'background:#1a5c1a;color:#fff;padding:4px');
@@ -2052,49 +2052,33 @@
     return best;
   }
 
-  async function faceCell(win, tx, ty) {
-    for (let attempt = 0; attempt < 6; attempt++) {
-      const meCur = discoverMeBig(win) || getMe(win);
-      if (!meCur) break;
-      // только серверный napr — localNapr может опережать Confirm
-      const sn = serverNapr(win);
-      if (sn) {
-        const ahead = cellAhead(win, meCur, sn);
-        if (Number(ahead.x) === Number(tx) && Number(ahead.y) === Number(ty)) {
-          BOT.state.wanderNapr = sn;
-          setLocalNapr(sn);
-          return true;
-        }
-      }
-      const faceNeeded = naprToward(win, meCur.x, meCur.y, tx, ty);
-      const t = turnToFace(win, faceNeeded);
-      if (!t) {
-        // уже смотрим куда надо по facingNapr, но сервер ещё не отдал — подождём
-        const ok0 = await waitServerNapr(win, faceNeeded, 1800);
-        if (ok0) {
-          const ahead0 = cellAhead(win, meCur, faceNeeded);
-          if (Number(ahead0.x) === Number(tx) && Number(ahead0.y) === Number(ty)) return true;
-        }
-        break;
-      }
-      const ok = await waitServerNapr(win, faceNeeded, 2800);
-      if (!ok) {
-        log(
-          'Большой лес: курс не подтверждён (нужен ' +
-            faceNeeded +
-            ', сервер ' +
-            (serverNapr(win) || '?') +
-            ')',
-          'err'
-        );
-      }
+  async function turnCraftConfirmed(win, want) {
+    if (!(want >= 1 && want <= 8)) return false;
+    for (let i = 0; i < 4; i++) {
+      const cur = serverNapr(win);
+      if (!cur) return false;
+      if (cur === want) return true;
+      const right = (want - cur + 8) % 8;
+      const left = (cur - want + 8) % 8;
+      const useLeft = left <= right;
+      const next = ((cur - 1 + (useLeft ? 7 : 1)) % 8) + 1;
+      bigForestSend(win, 'actNewMaps-ChangeNapr=' + (useLeft ? '0' : '1'));
+      BOT.state.lastBotTurnAt = Date.now();
+      if (!(await waitServerNapr(win, next, 3500))) return false;
     }
-    const me2 = discoverMeBig(win) || getMe(win);
-    if (!me2) return false;
-    const sn2 = serverNapr(win);
-    if (!sn2) return false;
-    const ahead2 = cellAhead(win, me2, sn2);
-    return Number(ahead2.x) === Number(tx) && Number(ahead2.y) === Number(ty);
+    return serverNapr(win) === want;
+  }
+
+  async function faceCell(win, tx, ty) {
+    const me = discoverMeBig(win) || getMe(win);
+    if (!me || bigForestChebyshev(me.x, me.y, tx, ty) !== 1) return false;
+    const want = naprToward(win, me.x, me.y, tx, ty);
+    if (!(await turnCraftConfirmed(win, want))) return false;
+    const after = discoverMeBig(win) || getMe(win);
+    const n = serverNapr(win);
+    if (!after || !n) return false;
+    const ahead = cellAhead(win, after, n);
+    return Number(ahead.x) === Number(tx) && Number(ahead.y) === Number(ty);
   }
 
   async function approachAndFaceVein(win, me, vein) {
@@ -3123,36 +3107,34 @@
   }
 
   function findWearTarget(root, wantKind) {
-    if (!root) return null;
-    const html = String((root.innerHTML || '') + ' ' + (root.outerHTML || ''));
-    // реальная сумка: <input type="hidden" name="actUser-Wear" value="ID"> (form часто пустой/закрыт)
-    const wearHid =
-      /name\s*=\s*["']actUser-Wear["'][^>]*value\s*=\s*["'](\d+)["']/i.exec(html) ||
-      /value\s*=\s*["'](\d+)["'][^>]*name\s*=\s*["']actUser-Wear["']/i.exec(html) ||
-      /actUser-Wear=(\d+)/i.exec(html);
-    if (wearHid) return { href: 'bag_type_17.html?actUser-Wear=' + wearHid[1], id: wearHid[1] };
-    const btn = findRowAction(root, /одеть|надеть|wear/i);
-    if (btn) {
-      // рядом может быть hidden Wear без формы — не кликать submit впустую
-      let node = btn;
-      for (let up = 0; up < 6 && node; up++) {
-        const hid = node.querySelector && node.querySelector('input[name="actUser-Wear"]');
-        if (hid && hid.value) return { href: 'bag_type_17.html?actUser-Wear=' + hid.value, id: hid.value };
-        node = node.parentNode;
-      }
-      return { el: btn };
+    if (!root || !root.querySelectorAll) return null;
+    const els = [root, ...root.querySelectorAll('input,button,a,[onclick]')];
+    const hidden = els.filter(function (el) {
+      return el.getAttribute && el.getAttribute('name') === 'actUser-Wear' &&
+        /^\d+$/.test(String(el.value || ''));
+    });
+    // Never choose an arbitrary item from a container with several wear actions.
+    if (hidden.length > 1) return null;
+    if (hidden.length === 1) {
+      const id = String(hidden[0].value);
+      return { href: 'bag_type_17.html?actUser-Wear=' + id, id: id };
     }
-    const inputs = root.querySelectorAll ? [...root.querySelectorAll('input,button,a')] : [];
-    for (let i = 0; i < inputs.length; i++) {
-      const el = inputs[i];
-      const blob = ((el.value || '') + ' ' + (el.name || '') + ' ' + (el.getAttribute('onclick') || '')).toLowerCase();
-      if (/одеть|надеть|wear/i.test(blob)) return { el: el };
-      const v = String(el.value || '');
-      if (/actUser-Wear/i.test(blob) && /^\d{2,}$/.test(v)) {
-        return { href: 'bag_type_17.html?actUser-Wear=' + v, id: v };
-      }
+    const candidates = [];
+    for (const el of els) {
+      if (!el.getAttribute) continue;
+      const action = (el.getAttribute('onclick') || '') + ' ' +
+        (el.getAttribute('href') || '') + ' ' + (el.getAttribute('name') || '');
+      if (/actUnWear|unwear|unequip|actUser-UnWear/i.test(action)) continue;
+      const label = String(el.value || el.textContent || '').trim();
+      if (/снять/i.test(label)) continue;
+      if (/actUser-Wear=\d+|\bactWear\s*\(/i.test(action) ||
+          /^(?:надеть|одеть|wear)$/i.test(label)) candidates.push(el);
     }
-    return null;
+    if (candidates.length !== 1) return null;
+    const el = candidates[0];
+    const href = el.getAttribute('href') || '';
+    if (/actUser-Wear=\d+/i.test(href)) return { href: href };
+    return { el: el };
   }
 
   function findBagToolWear(doc, wantKind) {
@@ -3191,7 +3173,7 @@
       const equipped = bagLooksEquipped(txt);
       if (wear) return { node: node, txt: txt, wear: wear, equipped: equipped };
       // нет «Надеть» у кирки в списке → обычно уже на кукле (см. панель выше)
-      if (!equippedOnly) equippedOnly = { node: node, txt: txt, wear: null, equipped: true };
+      if (equipped && !equippedOnly) equippedOnly = { node: node, txt: txt, wear: null, equipped: true };
       if (!anyTool) anyTool = { node: node, txt: txt, wear: null, equipped: false };
     }
     const imgs = [...doc.querySelectorAll('img.item_img,img[title],img[alt]')];
@@ -3235,9 +3217,25 @@
   }
 
   function handHasTool(wantKind) {
-    const t = normalizeItemName(readEquippedHandTitle());
-    if (!t) return false;
-    return bagRowIsTool(t, wantKind);
+    const seen = new Set();
+    function visit(win, depth) {
+      if (!win || depth > 5 || seen.has(win)) return false;
+      seen.add(win);
+      try {
+        const doc = win.document;
+        for (const img of doc.querySelectorAll('img[onclick],#IMG_rarm,#IMG_larm')) {
+          const action = img.getAttribute('onclick') || '';
+          const worn = /\bactUnWear\s*\(/i.test(action) ||
+            img.id === 'IMG_rarm' || img.id === 'IMG_larm';
+          if (worn && bagRowIsTool(img.title || img.alt || '', wantKind)) return true;
+        }
+        for (let i = 0; i < win.frames.length; i++) {
+          if (visit(win.frames[i], depth + 1)) return true;
+        }
+      } catch (e) {}
+      return false;
+    }
+    return visit(getTopWin(), 0);
   }
 
   function holdCraftNearMe(me, kind, ms) {
@@ -3371,19 +3369,6 @@
       log('Большой лес: клетка ' + key + ' в бане — не добываю');
       return false;
     }
-    if (BOT.state.lastDobychaKey === key) {
-      BOT.state.dobychaFails = (BOT.state.dobychaFails || 0) + 1;
-    } else {
-      BOT.state.lastDobychaKey = key;
-      BOT.state.dobychaFails = 1;
-    }
-    if (BOT.state.dobychaFails >= 3) {
-      BOT.state.bannedAbs.add(key);
-      log('Большой лес: бан клетки ' + key + ' (пустая текстура/ошибка)', 'err');
-      BOT.state.dobychaFails = 0;
-      BOT.state.bigForestHint = null;
-      return false;
-    }
     const hintTxt = (BOT.state.bigForestHint && BOT.state.bigForestHint.txt) || reason || '';
     const toolKind =
       kind || kindAtCell(win, me && me.x, me && me.y) || craftKindFromHint(BOT.state.bigForestHint);
@@ -3396,6 +3381,19 @@
       BOT.state.lastEquipFailAt = Date.now();
       BOT.state.lastCraftFailReason = 'equip';
       holdCraftNearMe(me, toolKind, 25000);
+      return false;
+    }
+    if (BOT.state.lastDobychaKey === key) {
+      BOT.state.dobychaFails = (BOT.state.dobychaFails || 0) + 1;
+    } else {
+      BOT.state.lastDobychaKey = key;
+      BOT.state.dobychaFails = 1;
+    }
+    if (BOT.state.dobychaFails >= 3) {
+      BOT.state.bannedAbs.add(key);
+      log('Большой лес: бан клетки ' + key + ' (пустая текстура/ошибка)', 'err');
+      BOT.state.dobychaFails = 0;
+      BOT.state.bigForestHint = null;
       return false;
     }
     BOT.state.lastCraftFailReason = '';
@@ -3465,6 +3463,12 @@
     const me = discoverMeBig(win) || getMe(win);
     if (!me) return false;
 
+    if (hint.x != null && hint.y != null &&
+        (Number(hint.x) !== Number(me.x) || Number(hint.y) !== Number(me.y))) {
+      BOT.state.bigForestHint = null;
+      await bigForestDoSearch(win);
+      return true;
+    }
     const kind = craftKindFromHint(hint);
     // курс на момент поиска (не после approachAndFaceVein)
     const base =
@@ -3509,25 +3513,10 @@
     }
     log('Большой лес: проверка инструмента выполнена', 'ok');
 
-    const turned = turnToFace(win, targetNapr);
-    BOT.state.wanderNapr = targetNapr;
-    if (turned) log('Большой лес: поворот в направление ' + targetNapr);
-    const faceOk = await waitServerNapr(win, targetNapr, turned ? 2800 : 1200);
-    if (!faceOk) {
-      turnToFace(win, targetNapr);
-      const faceOk2 = await waitServerNapr(win, targetNapr, 2200);
-      if (!faceOk2) {
-        log(
-          'Большой лес: курс не подтверждён сервером ' +
-            targetNapr +
-            ' (сейчас ' +
-            (serverNapr(win) || '?') +
-            ') — остаюсь',
-          'err'
-        );
-        holdCraftNearMe(me, kind, 15000);
-        return true;
-      }
+    if (!(await turnCraftConfirmed(win, targetNapr))) {
+      log('Большой лес: поворот не подтверждён — остановка без ухода от ресурса', 'err');
+      stopForest();
+      return true;
     }
 
     // после поворота ресурс должен быть «прямо перед вами»
@@ -3670,9 +3659,16 @@
     if (hint.dir === 'radius' || hint.dir === 'near' || hint.dir === 'frontish') {
       log('Большой лес: «в радиусе» ' + kind);
       BOT.state.craftHuntUntil = Date.now() + 60000;
-      try {
-        await equipCraftTool(hint.txt || kind, kind, true);
-      } catch (eEq2) {}
+      if (BOT.cfg.forest.equipTool) {
+        let ready = false;
+        try { ready = await equipCraftTool(hint.txt || kind, kind, true); } catch (e) {}
+        if (!ready) {
+          BOT.state.lastCraftFailReason = 'equip';
+          log('Большой лес: инструмент не подтверждён — стоп у ресурса', 'err');
+          stopForest();
+          return true;
+        }
+      }
       const radius = Math.max(1, Number(BOT.cfg.forest.searchRadius) || 5);
       const veins = listBigForestItems(win, 'craft')
         .filter(function (it) {
@@ -3691,9 +3687,8 @@
         const v = veins[0];
         const faced = await approachAndFaceVein(win, me, v);
         if (!faced) {
-          markCraftRadiusTried(v.key);
-          markVeinScanned(v.key);
-          log('Большой лес: не встал к ' + v.key + ' — следующая жила', 'err');
+          log('Большой лес: подход/поворот не подтверждён — стоп, жила не считается пустой', 'err');
+          stopForest();
           return true;
         }
         await bigForestDoSearch(win);
@@ -3868,6 +3863,12 @@
       return;
     }
 
+    if (BOT.state.lastCraftFailReason === 'equip') {
+      log('Большой лес: не удалось подтвердить инструмент. Цель не считаю пустой; стоп. Проверьте сумку и нажмите Старт.', 'err');
+      stopForest();
+      return;
+    }
+
     adoptManualFacing(win);
 
     const idleKey = me.x + ',' + me.y;
@@ -3875,6 +3876,7 @@
       BOT.state.idleWatch = { key: idleKey, since: Date.now() };
     } else if (Date.now() - BOT.state.idleWatch.since > 12000) {
       if (
+        BOT.state.gotoTarget || craftHuntActive() ||
         Date.now() < (BOT.state.craftStickUntil || 0) ||
         (hintFresh(BOT.state.bigForestHint, 20000) && BOT.state.bigForestHint && BOT.state.bigForestHint.front)
       ) {
@@ -3939,7 +3941,14 @@
             break;
           }
         }
-        if (BOT.state.gotoTarget && !progressed) {
+        if (progressed) goto.noProgressAttempts = 0;
+        if (BOT.state.gotoTarget === goto && !progressed) {
+          goto.noProgressAttempts = (goto.noProgressAttempts || 0) + 1;
+          if (goto.noProgressAttempts < 3) {
+            log('Точка: нет подтверждённого шага; повтор ' + goto.noProgressAttempts + '/3');
+            await sleep(1000);
+            return;
+          }
           log('Большой лес: к точке ' + gx + ',' + gy + ' нет шага — стоп точки', 'err');
           BOT.state.gotoTarget = null;
           if (BOT.state.gotoOnly) {
@@ -7437,6 +7446,8 @@
   async function startForest(opts) {
     opts = opts || {};
     try {
+      BOT.state.lastCraftFailReason = '';
+      BOT.state.lastEquipFailAt = 0;
       if (!checkLicense()) {
         log('Лицензия блокирует старт — снимите галку «привязка UserID»', 'err');
         return;
