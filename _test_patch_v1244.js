@@ -21,14 +21,14 @@ function ok(name, cond, extra) {
   }
 }
 
-ok('V 1.2.44', /@version\s+1\.2\.44/.test(src) && /VERSION = '1\.2\.44'/.test(src));
+ok('V 1.2.46', /@version\s+1\.2\.46/.test(src) && /VERSION = '1\.2\.46'/.test(src));
 ok('serverNapr', /function serverNapr\(/.test(src));
 ok('waitServerNapr', /async function waitServerNapr\(/.test(src));
 ok('faceCell uses server', /async function faceCell[\s\S]{0,500}serverNapr\(win\)/.test(src));
 ok('no wander on equip fail', !/нет инструмента, пауза 30с — иду блуждать/.test(src));
 ok('holdCraftNearMe', /function holdCraftNearMe\(/.test(src));
 ok('lastCraftFailReason', /lastCraftFailReason/.test(src));
-ok('equip verify hand', /handHasTool\(wantKind\)[\s\S]{0,200}Экипировал/.test(src));
+ok('equip verify hand', /handHasTool\(wantKind\)[\s\S]{0,400}Экипировал/.test(src));
 ok('findBag without wear', /equippedOnly \|\| anyTool/.test(src));
 ok('pickaxe axe split', /function bagHasAxeWords[\s\S]{0,200}pickaxe/.test(src));
 ok('no оружи reject before pick', /позитив раньше брони/.test(src));

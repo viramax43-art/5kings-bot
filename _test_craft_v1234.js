@@ -20,7 +20,7 @@ function ok(name, cond, extra) {
   }
 }
 
-ok('V 1.2.45', /@version\s+1\.2\.45/.test(src));
+ok('V 1.2.46', /@version\s+1\.2\.46/.test(src));
 ok('reactToCraftHint', /async function reactToCraftHint/.test(src));
 ok('left via mineByRelative', /mineByRelativeHint/.test(src) && /naprRelative/.test(src));
 ok('hint left branch', /hint\.dir === 'left' \|\| hint\.dir === 'right' \|\| hint\.dir === 'back'/.test(src));

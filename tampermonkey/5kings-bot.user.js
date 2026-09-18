@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         5Kings Bot
 // @namespace    https://5kings.ru/
-// @version      1.2.45
+// @version      1.2.46
 // @description  Лес + королевские хаосы 5kings.ru. Только ТЗ. Локальный userscript.
 // @author       freelance
 // @match        http://5kings.ru/*
@@ -71,7 +71,7 @@
     }
   }
 
-  const VERSION = '1.2.45';
+  const VERSION = '1.2.46';
 
   try {
     console.log('%c[5k-bot] executed v' + VERSION + ' @ ' + location.href, 'background:#1a5c1a;color:#fff;padding:4px');
@@ -1376,18 +1376,31 @@
     pushAll(/радиусе/i, 'radius');
     pushAll(/перед\s+вами/i, 'frontish');
 
+    // v1.2.46: «в радиусе 5» — это не направление. Раньше последний маркер в
+    // строке перебивал реальный left/right, из-за чего бот поворачивался спиной
+    // (событие «в радиусе 5» + скан → «сзади»). Теперь у маркеров есть приоритет:
+    // направление бьёт «радиус», а «радиус» без направления = обычная охота.
+    const DIR_PRIO = { front: 5, frontish: 4, left: 3, right: 3, back: 3, radius: 2, near: 1 };
     markers.sort(function (a, b) {
-      return a.i - b.i;
+      const pa = DIR_PRIO[a.dir] || 1;
+      const pb = DIR_PRIO[b.dir] || 1;
+      if (pa !== pb) return pa - pb; // слабее — раньше; сильнее перезапишет
+      return a.i - b.i; // внутри одного приоритета — последний по тексту
     });
     let dir = 'near';
     if (markers.length) dir = markers[markers.length - 1].dir;
     if (dir === 'frontish' && /прямо\s+перед\s+вами/i.test(value)) dir = 'front';
+    // «в радиусе N» — запоминаем N для охота-ветки (searchRadius)
+    let radiusN = 0;
+    const mR = /в\s+радиус[еа]\s+(\d{1,2})/i.exec(value);
+    if (mR) radiusN = Math.max(1, Math.min(12, Number(mR[1]) || 0));
 
     const fp = craftHintFingerprint(dir, value);
     return {
       t: Date.now(),
       dir: dir,
       front: dir === 'front',
+      radiusN: radiusN,
       txt: value.slice(-500),
       fp: fp,
     };
@@ -1415,6 +1428,11 @@
     hint.x = me ? Number(me.x) : null;
     hint.y = me ? Number(me.y) : null;
     hint.napr = facingNapr(win) || currentNapr(win);
+    // v1.2.46: снимок стойки на момент подсказки. Пока бот идёт/разворачивается,
+    // курс и клетка меняются — «справа» из старого сообщения врёт. mineByRelativeHint
+    // сверяет стойку и, если она уехала, делает повторный поиск вместо кривого поворота.
+    hint.naprAt = hint.napr;
+    hint.naprSrv = serverNapr(win) || 0;
     BOT.state.lastHintFp = fp;
     BOT.state.lastHintFpAt = Date.now();
     BOT.state.bigForestHint = hint;
@@ -1422,6 +1440,20 @@
       BOT.state.craftHuntUntil = Date.now() + 60000;
     }
     return hint;
+  }
+
+  /** Стойка с момента подсказки не изменилась → относительное направление ещё правдиво. */
+  function hintStanceIntact(win, hint) {
+    if (!hint) return false;
+    const me = discoverMeBig(win) || getMe(win);
+    if (!me || hint.x == null || hint.y == null) return false;
+    if (Number(me.x) !== Number(hint.x) || Number(me.y) !== Number(hint.y)) return false;
+    const n = Number(hint.napr || 0);
+    if (!(n >= 1 && n <= 8)) return true;
+    const curSrv = serverNapr(win) || 0;
+    if (curSrv && hint.naprSrv && curSrv !== Number(hint.naprSrv)) return false;
+    const curLocal = currentNapr(win);
+    return !(curLocal >= 1 && curLocal <= 8 && curLocal !== n);
   }
 
   function craftHuntActive() {
@@ -3272,14 +3304,45 @@
     log('Инвентарь: ' + label + '…');
 
     const paths = ['bag_type_17.html', 'bag_type_17_mode_0.html', 'bag.chtml'];
+    let sawRows = 0;
+    let sawToolish = 0;
     for (let pi = 0; pi < paths.length; pi++) {
       const ok = await withBagPopup(paths[pi], async function (bagWin) {
         const rows = [...bagWin.document.querySelectorAll('tr')];
+        sawRows = Math.max(sawRows, rows.length);
+        if (!BOT.state.bagDumpAt || Date.now() - BOT.state.bagDumpAt > 60000) {
+          BOT.state.bagDumpAt = Date.now();
+          try {
+            // v1.2.46: диагностика — чем на самом деле оказалась сумка.
+            // Без этого «инструмент в сумке не найден» неотличим от «страница не та».
+            const dump = [];
+            for (let di = 0; di < rows.length && di < 40; di++) {
+              const t = bagRowBlob(rows[di]);
+              if (t) dump.push(t.replace(/\s+/g, ' ').slice(0, 90));
+            }
+            const worn = [...bagWin.document.querySelectorAll('img[onclick]')]
+              .filter(function (im) {
+                return /actUnWear|UnWear|actWear|Wear/i.test(im.getAttribute('onclick') || '');
+              })
+              .map(function (im) {
+                return (im.title || im.alt || im.id || '?') + ' [' + (im.getAttribute('onclick') || '').slice(0, 40) + ']';
+              });
+            BOT.state.bagDump = { path: paths[pi], rows: rows.length, worn: worn.slice(0, 12), items: dump.slice(0, 25) };
+            log(
+              'Инвентарь: дамп (' + paths[pi] + ') строк ' + rows.length +
+                ', надето ' + worn.length + ': ' + worn.slice(0, 6).join(' | ')
+            );
+            if (dump.length) log('Инвентарь: ' + dump.slice(0, 8).join(' || '));
+          } catch (eDump) {}
+        }
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
           if (row.querySelector && row.querySelector('tr')) continue;
           const txt = bagRowBlob(row);
           if (!txt || txt.length > 400) continue;
+          if (bagHasPickWords(txt) || bagHasAxeWords(txt) || /корзин|грабл|кирк|топор|pickaxe|axe/i.test(txt)) {
+            sawToolish++;
+          }
           const wrong =
             (wantPick || wantAxe) && /корзин/i.test(txt)
               ? true
@@ -3353,7 +3416,13 @@
       });
       if (ok) return true;
     }
-    log('Инструмент в сумке не найден (' + label + ')', 'err');
+    log(
+      'Инструмент в сумке не найден (' + label + ')' +
+        (sawRows ? ' — строк в сумке ' + sawRows : ' — сумка не открылась') +
+        (sawToolish ? ', похожих предметов ' + sawToolish : ', предметов-инструментов нет') +
+        '. Проверьте, что кирка куплена (shop_type_17) и лежит в рюкзаке 17-го типа.',
+      'err'
+    );
     return false;
   }
 
@@ -3469,6 +3538,14 @@
       await bigForestDoSearch(win);
       return true;
     }
+    // v1.2.46: пока шли/крутились — курс мог уехать, «справа/слева» из старого
+    // сообщения больше не про текущую стойку. Повторный поиск вместо кривого поворота.
+    if (!hintStanceIntact(win, hint)) {
+      log('Большой лес: стойка изменилась — подсказка «' + hint.dir + '» устарела, ищу заново');
+      BOT.state.bigForestHint = null;
+      await bigForestDoSearch(win);
+      return true;
+    }
     const kind = craftKindFromHint(hint);
     // курс на момент поиска (не после approachAndFaceVein)
     const base =
@@ -3514,8 +3591,13 @@
     log('Большой лес: проверка инструмента выполнена', 'ok');
 
     if (!(await turnCraftConfirmed(win, targetNapr))) {
-      log('Большой лес: поворот не подтверждён — остановка без ухода от ресурса', 'err');
-      stopForest();
+      // v1.2.46: раньше здесь был stopForest() — бот замирал навсегда после одного
+      // неподтверждённого поворота. Теперь: помечаем жилу «пробовал» и идём дальше.
+      log('Большой лес: поворот не подтверждён — пропускаю жилу, продолжаю маршрут', 'err');
+      BOT.state.lastCraftFailReason = 'turn';
+      if (hint.x != null && hint.y != null) markVeinScanned(hint.x + ',' + hint.y);
+      BOT.state.bigForestHint = null;
+      BOT.state.craftHuntUntil = 0;
       return true;
     }
 
@@ -3664,12 +3746,24 @@
         try { ready = await equipCraftTool(hint.txt || kind, kind, true); } catch (e) {}
         if (!ready) {
           BOT.state.lastCraftFailReason = 'equip';
-          log('Большой лес: инструмент не подтверждён — стоп у ресурса', 'err');
-          stopForest();
+          // v1.2.46: без инструмента не стоим столбом. Жилу отпускаем (она опять
+          // придёт «в радиусе»), охота продолжается — иначе лес виснет навсегда.
+          BOT.state.lastEquipFailAt = Date.now();
+          log('Большой лес: инструмент не подтверждён — жилу пропускаю, продолжаю маршрут', 'err');
+          try { BOT.state.equippedToolKind = null; } catch (eK) {}
+          try {
+            const mv = listBigForestItems(win, 'craft')[0];
+            if (mv && mv.key) markVeinScanned(mv.key);
+          } catch (eMv) {}
+          BOT.state.bigForestHint = null;
+          BOT.state.craftHuntUntil = 0;
           return true;
         }
       }
-      const radius = Math.max(1, Number(BOT.cfg.forest.searchRadius) || 5);
+      const radius = Math.max(
+        1,
+        Number((hint && hint.radiusN) || 0) || Number(BOT.cfg.forest.searchRadius) || 5
+      );
       const veins = listBigForestItems(win, 'craft')
         .filter(function (it) {
           if (veinWasScanned(it.key) || craftRadiusWasTried(it.key)) return false;
